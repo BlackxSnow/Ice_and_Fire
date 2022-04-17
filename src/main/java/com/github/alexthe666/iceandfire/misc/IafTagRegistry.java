@@ -23,6 +23,6 @@ public class IafTagRegistry {
     public static final TagKey<EntityType<?>> FIRE_DRAGON_TARGETS = TagKey.create(Registry.ENTITY_TYPE_REGISTRY, new ResourceLocation("iceandfire", "fire_dragon_targets"));
     public static final TagKey<EntityType<?>> LIGHTNING_DRAGON_TARGETS = TagKey.create(Registry.ENTITY_TYPE_REGISTRY, new ResourceLocation("iceandfire", "lightning_dragon_targets"));
     public static final TagKey<EntityType<?>> CYCLOPS_UNLIFTABLES = TagKey.create(Registry.ENTITY_TYPE_REGISTRY, new ResourceLocation("iceandfire", "cyclops_unliftables"));
-    public static final TagKey<MobEffect> BLINDED = TagKey.create(Registry.MOB_EFFECT_REGISTRY, new ResourceLocation("iceandfire", "blinded"));
+    public static final TagKey<EntityType<?>> BLINDED = TagKey.create(Registry.ENTITY_TYPE_REGISTRY, new ResourceLocation("iceandfire", "blinded"));
 
 }
