@@ -7,7 +7,7 @@ import com.github.alexthe666.iceandfire.event.ServerEvents;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.InteractionHand;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraftforge.network.NetworkEvent;
 
 public class MessageSwingArm {
 

@@ -8,7 +8,7 @@ import com.github.alexthe666.iceandfire.entity.EntityHippogryph;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraftforge.network.NetworkEvent;
 
 public class MessageHippogryphArmor {
 

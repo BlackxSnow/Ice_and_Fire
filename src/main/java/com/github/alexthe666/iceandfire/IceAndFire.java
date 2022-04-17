@@ -30,12 +30,11 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.minecraftforge.network.simple.SimpleChannel;
-import net.minecraftforge.fml.event.server.FMLServerStartedEvent;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.fml.network.NetworkDirection;
-import net.minecraftforge.fml.network.NetworkRegistry;
-import net.minecraftforge.fml.network.simple.SimpleChannel;
-import net.minecraftforge.fml.server.ServerLifecycleHooks;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
 @Mod(IceAndFire.MODID)
 @Mod.EventBusSubscriber(modid = IceAndFire.MODID)
@@ -86,7 +85,7 @@ public class IceAndFire {
     }
 
     @SubscribeEvent
-    public void onServerStarted(FMLServerStartedEvent event) {
+    public void onServerStarted(ServerStartedEvent event) {
     	LOGGER.info(IafWorldRegistry.LOADED_FEATURES);
     	LOGGER.info(IafEntityRegistry.LOADED_ENTITIES);
     }
