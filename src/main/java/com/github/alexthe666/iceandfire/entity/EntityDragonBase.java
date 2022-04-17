@@ -31,7 +31,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.*;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
@@ -67,7 +67,7 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.util.*;
-import net.minecraft.util.math.*;
+import net.minecraft.util.Mth.*;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -93,7 +93,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.AgableMob;
+import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
@@ -593,7 +593,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
 
     public void remove() {
         removeParts();
-        super.remove();
+        super.remove(RemovalReason.DISCARDED);
     }
 
     protected int getExperienceReward(Player player) {
@@ -1076,7 +1076,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
                     stack.shrink(1);
                 }
                 this.setDeathStage(this.getDeathStage() + 1);
-                player.inventory.add(new ItemStack(this.getBloodItem(), 1));
+                player.getInventory().add(new ItemStack(this.getBloodItem(), 1));
                 return InteractionResult.SUCCESS;
             } else if (!level.isClientSide && stack.isEmpty() && IafConfig.dragonDropSkull) {
                 if (this.getDeathStage() == lastDeathStage - 1) {
@@ -1139,7 +1139,8 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
             }
             if (this.isFood(stack) && this.shouldDropLoot()) {
                 this.setAge(0);
-                this.usePlayerItem(player, stack);
+                // NOTE: Hand seems to be new requirement. Unsure of ideal behaviour
+                this.usePlayerItem(player, InteractionHand.MAIN_HAND, stack);
                 this.setInLove(player);
                 return InteractionResult.SUCCESS;
             }
@@ -1319,7 +1320,8 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
             return;
         }
         this.setAgeInDays(this.getAgeInDays() + ageInDays);
-        this.setLocationFromBoundingbox();
+        // NOTE: This is supposedly unnecessary with 1.18, but I left it in just in case
+        this.setPos(this.getBoundingBox().getCenter());
         if (this.getAgeInDays() % 25 == 0) {
             for (int i = 0; i < this.getRenderSize() * 4; i++) {
                 double motionX = getRandom().nextGaussian() * 0.07D;
@@ -1500,8 +1502,8 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
                 if (this.isModelDead()) {
                     passenger.stopRiding();
                 }
-                yBodyRot = yRot;
-                this.yRot = passenger.yRot;
+                yBodyRot = getYRot();
+                this.setYRot(passenger.getYRot());
                 Vec3 riderPos = this.getRiderPosition();
                 passenger.setPos(riderPos.x, riderPos.y + passenger.getBbHeight(), riderPos.z);
             }
@@ -1524,7 +1526,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
             prey.hurt(DamageSource.mobAttack(this), prey instanceof Player ? 17F : (float) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue() * 4);
             prey.stopRiding();
         }
-        yBodyRot = yRot;
+        yBodyRot = getYRot();
         float modTick_0 = this.getAnimationTick() - 25;
         float modTick_1 = this.getAnimationTick() > 25 && this.getAnimationTick() < 55 ? 8 * Mth.clamp(Mth.sin((float) (Math.PI + modTick_0 * 0.25)), -0.8F, 0.8F) : 0;
         float modTick_2 = this.getAnimationTick() > 30 ? 10 : Math.max(0, this.getAnimationTick() - 20);
@@ -1827,7 +1829,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
     }
 
     @Override
-    public AgableMob getBreedOffspring(ServerLevel serverWorld, AgableMob ageable) {
+    public AgeableMob getBreedOffspring(ServerLevel serverWorld, AgeableMob ageable) {
         return null;
     }
 
@@ -2145,9 +2147,9 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
             pitchX = Math.max(dragonPitch / 90, -0.7F);
         }
         float xzMod = (0.15F + pitchX) * getRenderSize() + extraAgeScale;
-        float headPosX = (float) (getX() + (xzMod) * Math.cos((yRot + 90) * Math.PI / 180));
+        float headPosX = (float) (getX() + (xzMod) * Math.cos((getYRot() + 90) * Math.PI / 180));
         float headPosY = (float) (getY() + (0.7F + sitProg + hoverProg + deadProg + sleepProg + flyProg + pitchY) * getRenderSize() * 0.3F + extraAgeScale);
-        float headPosZ = (float) (getZ() + (xzMod) * Math.sin((yRot + 90) * Math.PI / 180));
+        float headPosZ = (float) (getZ() + (xzMod) * Math.sin((getYRot() + 90) * Math.PI / 180));
         return new Vec3(headPosX, headPosY, headPosZ);
     }
 
@@ -2194,9 +2196,9 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
         }
         float flightXz = 1.0F + flyProg + hoverProg;
         float xzMod = (1.7F * getRenderSize() * 0.3F * flightXz) + getRenderSize() * (0.3F * (float) Math.sin((dragonPitch + 90) * Math.PI / 180) * pitchAdjustment - pitchMinus - hoverProg * 0.45F);
-        float headPosX = (float) (getX() + (xzMod) * Math.cos((yRot + 90) * Math.PI / 180));
+        float headPosX = (float) (getX() + (xzMod) * Math.cos((getYRot() + 90) * Math.PI / 180));
         float headPosY = (float) (getY() + (0.7F + sitProg + hoverProg + deadProg + epicRoarProg + sleepProg + flyProg + pitchMulti) * getRenderSize() * 0.3F);
-        float headPosZ = (float) (getZ() + (xzMod) * Math.sin((yRot + 90) * Math.PI / 180));
+        float headPosZ = (float) (getZ() + (xzMod) * Math.sin((getYRot() + 90) * Math.PI / 180));
         return new Vec3(headPosX, headPosY, headPosZ);
     }
 
@@ -2215,7 +2217,7 @@ public abstract class EntityDragonBase extends TamableAnimal implements IPassabi
             float distZ = (float) (entity.getZ() - this.getZ());
             if (this.isBreathingFire()) {
                 if (this.isActuallyBreathingFire()) {
-                    yRot = yBodyRot;
+                    setYRot(yBodyRot);
                     if (this.tickCount % 5 == 0) {
                         this.playSound(IafSoundRegistry.FIREDRAGON_BREATH, 4, 1);
                     }

@@ -276,7 +276,7 @@ public class EntityIceDragon extends EntityDragonBase {
             if (this.getAnimation() != ANIMATION_FIRECHARGE) {
                 this.setAnimation(ANIMATION_FIRECHARGE);
             } else if (this.getAnimationTick() == 15) {
-                yRot = yBodyRot;
+                setYRot(yBodyRot);
                 Vec3 headVec = this.getHeadPosition();
                 this.playSound(IafSoundRegistry.ICEDRAGON_BREATH, 4, 1);
                 double d2 = controller.getLookAngle().x;
@@ -297,7 +297,7 @@ public class EntityIceDragon extends EntityDragonBase {
         } else {
             if (this.isBreathingFire()) {
                 if (this.isActuallyBreathingFire()) {
-                    yRot = yBodyRot;
+                    setYRot(yBodyRot);
                     if (this.tickCount % 5 == 0) {
                         this.playSound(IafSoundRegistry.ICEDRAGON_BREATH, 4, 1);
                     }
@@ -350,7 +350,7 @@ public class EntityIceDragon extends EntityDragonBase {
                 if (this.getAnimation() != ANIMATION_FIRECHARGE) {
                     this.setAnimation(ANIMATION_FIRECHARGE);
                 } else if (this.getAnimationTick() == 15) {
-                    yRot = yBodyRot;
+                    setYRot(yBodyRot);
                     Vec3 headVec = this.getHeadPosition();
                     double d2 = entity.getX() - headVec.x;
                     double d3 = entity.getY() - headVec.y;
@@ -374,7 +374,7 @@ public class EntityIceDragon extends EntityDragonBase {
             } else {
                 if (this.isBreathingFire()) {
                     if (this.isActuallyBreathingFire()) {
-                        yRot = yBodyRot;
+                        setYRot(yBodyRot);
                         if (this.tickCount % 5 == 0) {
                             this.playSound(IafSoundRegistry.ICEDRAGON_BREATH, 4, 1);
                         }
@@ -414,7 +414,7 @@ public class EntityIceDragon extends EntityDragonBase {
             if (this.getAnimation() != ANIMATION_FIRECHARGE) {
                 this.setAnimation(ANIMATION_FIRECHARGE);
             } else if (this.getAnimationTick() == 20) {
-                yRot = yBodyRot;
+                setYRot(yBodyRot);
                 Vec3 headVec = this.getHeadPosition();
                 double d2 = burnX - headVec.x;
                 double d3 = burnY - headVec.y;
@@ -525,7 +525,7 @@ public class EntityIceDragon extends EntityDragonBase {
     protected void breathFireAtPos(BlockPos burningTarget) {
         if (this.isBreathingFire()) {
             if (this.isActuallyBreathingFire()) {
-                yRot = yBodyRot;
+                setYRot(yBodyRot);
                 if (this.tickCount % 5 == 0) {
                     this.playSound(IafSoundRegistry.ICEDRAGON_BREATH, 4, 1);
                 }
@@ -559,8 +559,8 @@ public class EntityIceDragon extends EntityDragonBase {
         if (this.level.isClientSide) {
             for (int i = 0; i < 5; i++) {
                 float radiusAdd = i * 0.15F;
-                float headPosX = (float) (getX() + 1.8F * getRenderSize() * (0.3F + radiusAdd) * Math.cos((yRot + 90) * Math.PI / 180));
-                float headPosZ = (float) (getZ() + 1.8F * getRenderSize() * (0.3F + radiusAdd) * Math.sin((yRot + 90) * Math.PI / 180));
+                float headPosX = (float) (getX() + 1.8F * getRenderSize() * (0.3F + radiusAdd) * Math.cos((getYRot() + 90) * Math.PI / 180));
+                float headPosZ = (float) (getZ() + 1.8F * getRenderSize() * (0.3F + radiusAdd) * Math.sin((getYRot() + 90) * Math.PI / 180));
                 float headPosY = (float) (getY() + 0.5 * getRenderSize() * 0.3F);
                 IceAndFire.PROXY.spawnParticle("dragonice", headPosX, headPosY, headPosZ, 0, 0, 0);
             }

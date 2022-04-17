@@ -331,7 +331,7 @@ public class EntityCyclops extends Monster implements IAnimatedEntity, IBlacklis
                         BlockPos pos = new BlockPos(a, b, c);
                         BlockState state = level.getBlockState(pos);
                         Block block = state.getBlock();
-                        if (!state.isAir() && !state.getShape(level, pos).isEmpty() && !(block instanceof BushBlock) && block != Blocks.BEDROCK && (state.getBlock() instanceof LeavesBlock || BlockTags.LOGS.contains(state.getBlock()))) {
+                        if (!state.isAir() && !state.getShape(level, pos).isEmpty() && !(block instanceof BushBlock) && block != Blocks.BEDROCK && (state.getBlock() instanceof LeavesBlock || state.is(BlockTags.LOGS))) {
                             this.getDeltaMovement().scale(0.6D);
                             if (MinecraftForge.EVENT_BUS.post(new GenericGriefEvent(this, a, b, c))) continue;
                             if (block != Blocks.AIR) {
@@ -360,7 +360,8 @@ public class EntityCyclops extends Monster implements IAnimatedEntity, IBlacklis
         if (eyeEntity != null) {
             eyeEntity.remove();
         }
-        super.remove();
+        // Note: Seems to require reason now, unsure if important what the reason is.
+        super.remove(RemovalReason.DISCARDED);
     }
 
     @Override

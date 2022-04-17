@@ -26,14 +26,14 @@ import com.google.common.collect.Sets;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.entity.AgableMob;
+import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.MobType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.entity.npc.VillagerTrades;
@@ -107,7 +107,7 @@ public abstract class EntityMyrmexBase extends Animal implements IAnimatedEntity
         //this.moveController = new GroundMoveHelper(this);
     }
     private static boolean isJungleBiome(Level world, BlockPos position) {
-        return BiomeConfig.test(BiomeConfig.jungleMyrmexBiomes, world.getBiome(position));
+        return BiomeConfig.test(BiomeConfig.jungleMyrmexBiomes, world.getBiome(position).value());
     }
 
     public static boolean haveSameHive(EntityMyrmexBase myrmex, Entity entity) {
@@ -126,7 +126,7 @@ public abstract class EntityMyrmexBase extends Animal implements IAnimatedEntity
     }
 
     public static boolean isEdibleBlock(BlockState blockState) {
-        return BlockTags.getAllTags().getTag(IafTagRegistry.MYRMEX_HARVESTABLES).contains(blockState.getBlock());
+        return blockState.is(IafTagRegistry.MYRMEX_HARVESTABLES);
     }
 
     public static int getRandomCaste(Level world, Random random, boolean royal) {
@@ -231,8 +231,8 @@ public abstract class EntityMyrmexBase extends Animal implements IAnimatedEntity
             this.setTarget(null);
         }
         if (this.getGrowthStage() < 2 && this.getVehicle() != null && this.getVehicle() instanceof EntityMyrmexBase) {
-            float yaw = this.getVehicle().yRot;
-            this.yRot = yaw;
+            float yaw = this.getVehicle().getYRot();
+            this.setYRot(yaw);
             this.yHeadRot = yaw;
             this.yBodyRot = 0;
             this.yBodyRotO = 0;
@@ -388,7 +388,7 @@ public abstract class EntityMyrmexBase extends Animal implements IAnimatedEntity
 
     @Nullable
     @Override
-    public AgableMob getBreedOffspring(ServerLevel serverWorld, AgableMob ageable) {
+    public AgeableMob getBreedOffspring(ServerLevel serverWorld, AgeableMob ageable) {
         return null;
     }
 
@@ -590,7 +590,8 @@ public abstract class EntityMyrmexBase extends Animal implements IAnimatedEntity
         }
         if (getHive() != null) {
             BlockPos nursery = getHive().getRandomRoom(WorldGenMyrmexHive.RoomType.NURSERY, this.getRandom(), this.blockPosition());
-            return Mth.sqrt(this.distanceToSqr(nursery.getX(), nursery.getY(), nursery.getZ())) < 45;
+            // NOTE: Cast again, was double before.
+            return Mth.sqrt((float) this.distanceToSqr(nursery.getX(), nursery.getY(), nursery.getZ())) < 45;
         }
         return false;
     }
@@ -783,7 +784,7 @@ public abstract class EntityMyrmexBase extends Animal implements IAnimatedEntity
     }
 
     public boolean setSlot(int inventorySlot, ItemStack itemStackIn) {
-        if (super.setSlot(inventorySlot, itemStackIn)) {
+        if (super.getSlot(inventorySlot).set(itemStackIn)) {
             return true;
         } else {
             int i = inventorySlot - 300;
