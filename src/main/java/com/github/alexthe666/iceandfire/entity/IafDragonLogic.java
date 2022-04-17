@@ -1,6 +1,6 @@
 package com.github.alexthe666.iceandfire.entity;
 
-import com.github.alexthe666.citadel.server.entity.datatracker.EntityPropertiesHandler;
+//import com.github.alexthe666.citadel.server.entity.datatracker.EntityPropertiesHandler;
 import com.github.alexthe666.iceandfire.IafConfig;
 import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.props.MiscProperties;
@@ -468,7 +468,7 @@ public class IafDragonLogic {
     logic handler for the dragon's melee attacks.
     */
     public void updateDragonAttack() {
-        if (dragon.isPlayingAttackAnimation() && dragon.getTarget() != null && dragon.canSee(dragon.getTarget())) {
+        if (dragon.isPlayingAttackAnimation() && dragon.getTarget() != null && dragon.hasLineOfSight(dragon.getTarget())) {
             LivingEntity target = dragon.getTarget();
             double dist = dragon.distanceTo(target);
             if (dist < dragon.getRenderSize() * 0.2574 * 2 + 2) {
@@ -482,7 +482,7 @@ public class IafDragonLogic {
                 if (dragon.getAnimation() == EntityDragonBase.ANIMATION_TAILWHACK) {
                     if (dragon.getAnimationTick() > 20 && dragon.getAnimationTick() < 30) {
                         target.hurt(DamageSource.mobAttack(dragon), ((int) dragon.getAttribute(Attributes.ATTACK_DAMAGE).getValue()));
-                        target.knockback( dragon.getDragonStage() * 0.6F, Mth.sin(dragon.yRot * 0.017453292F), -Mth.cos(dragon.yRot * 0.017453292F));
+                        target.knockback( dragon.getDragonStage() * 0.6F, Mth.sin(dragon.getYRot() * 0.017453292F), -Mth.cos(dragon.getYRot() * 0.017453292F));
                         dragon.usingGroundAttack = dragon.getRandom().nextBoolean();
                         dragon.randomizeAttacks();
                     }
@@ -490,7 +490,7 @@ public class IafDragonLogic {
                 if (dragon.getAnimation() == EntityDragonBase.ANIMATION_WINGBLAST) {
                     if ((dragon.getAnimationTick() == 15 || dragon.getAnimationTick() == 25 || dragon.getAnimationTick() == 35)) {
                         target.hurt(DamageSource.mobAttack(dragon), ((int) dragon.getAttribute(Attributes.ATTACK_DAMAGE).getValue()));
-                        target.knockback( dragon.getDragonStage() * 0.6F, Mth.sin(dragon.yRot * 0.017453292F), -Mth.cos(dragon.yRot * 0.017453292F));
+                        target.knockback( dragon.getDragonStage() * 0.6F, Mth.sin(dragon.getYRot() * 0.017453292F), -Mth.cos(dragon.getYRot() * 0.017453292F));
                         dragon.usingGroundAttack = dragon.getRandom().nextBoolean();
                         dragon.randomizeAttacks();
                     }

@@ -9,12 +9,12 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.message.MessageMultipartInteract;
 
 import com.google.common.collect.ImmutableList;
-import net.minecraft.entity.*;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.entity.EquipmentSlot; //EquipmentSlotType ?
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -23,11 +23,11 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.util.HandSide;
+// import net.minecraft.util.HandSide;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraftforge.fml.network.NetworkHooks;
+import net.minecraftforge.network.NetworkHooks;
 
 import javax.annotation.Nullable;
 
@@ -65,7 +65,6 @@ public abstract class EntityMutlipartPart extends Entity {
 
     }
 
-    @Override
     public Entity getEntity() {
         return this;
     }
@@ -149,7 +148,7 @@ public abstract class EntityMutlipartPart extends Entity {
             Entity parent = getParent();
             refreshDimensions();
             if (parent != null && !level.isClientSide) {
-                float renderYawOffset = parent.yRot;
+                float renderYawOffset = parent.getYRot();
                 if(parent instanceof LivingEntity) {
                     renderYawOffset = ((LivingEntity) parent).yBodyRot;
                 }
@@ -160,11 +159,12 @@ public abstract class EntityMutlipartPart extends Entity {
                     double d2 = parent.getZ() - this.getZ();
                     double d3 = d0 * d0 + d1 * d1 + d2 * d2;
                     float f = (float)(Mth.atan2(d2, d0) * (double)(180F / (float)Math.PI)) - 90.0F;
-                    float f2 = -((float) (Mth.atan2(d1, Mth.sqrt(d0 * d0 + d2 * d2)) * (double) (180F / (float) Math.PI)));
-                    this.xRot = this.limitAngle(this.xRot, f2, 5.0F);
+                    // NOTE: Another down cast
+                    float f2 = -((float) (Mth.atan2(d1, Mth.sqrt((float) (d0 * d0 + d2 * d2))) * (double) (180F / (float) Math.PI)));
+                    this.setXRot(this.limitAngle(this.getXRot(), f2, 5.0F));
                     this.markHurt();
-                    this.yRot = renderYawOffset;
-                    this.setPartYaw(yRot);
+                    this.setYRot(renderYawOffset);
+                    this.setPartYaw(getYRot());
                     if (!this.level.isClientSide) {
                         this.collideWithNearbyEntities();
                     }
@@ -175,7 +175,7 @@ public abstract class EntityMutlipartPart extends Entity {
                 if (!this.level.isClientSide) {
                     this.collideWithNearbyEntities();
                 }
-                if (parent.removed && !level.isClientSide) {
+                if (parent.isRemoved() && !level.isClientSide) {
                     this.remove();
                 }
             } else if (tickCount > 20 && !level.isClientSide) {
@@ -211,7 +211,7 @@ public abstract class EntityMutlipartPart extends Entity {
 
 
     public void remove() {
-        this.remove(false);
+        this.remove(RemovalReason.DISCARDED);
     }
 
     public Entity getParent() {
@@ -283,6 +283,6 @@ public abstract class EntityMutlipartPart extends Entity {
     }
 
     public boolean shouldContinuePersisting() {
-        return isAddedToWorld() || this.removed;
+        return isAddedToWorld() || this.isRemoved();
     }
 }

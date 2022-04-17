@@ -3,7 +3,7 @@ package com.github.alexthe666.iceandfire.pathfinding.raycoms.pathjobs;
     All of this code is used with permission from Raycoms, one of the developers of the minecolonies project.
  */
 import com.github.alexthe666.iceandfire.IceAndFire;
-import com.github.alexthe666.iceandfire.pathfinding.raycoms.Node;
+import com.github.alexthe666.iceandfire.pathfinding.raycoms.RayNode;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.pathfinder.Path;
@@ -88,7 +88,7 @@ public class PathJobMoveAwayFromLocation extends AbstractPathJob
      * @return true if so.
      */
     @Override
-    protected boolean isAtDestination(final Node n)
+    protected boolean isAtDestination(final RayNode n)
     {
         return Math.sqrt(avoid.distSqr(n.pos)) > avoidDistance;
     }
@@ -100,7 +100,7 @@ public class PathJobMoveAwayFromLocation extends AbstractPathJob
      * @return double amount.
      */
     @Override
-    protected double getNodeResultScore(final Node n)
+    protected double getNodeResultScore(final RayNode n)
     {
         return -avoid.distSqr(n.pos);
     }

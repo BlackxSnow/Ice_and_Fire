@@ -3,7 +3,7 @@ package com.github.alexthe666.iceandfire.pathfinding.raycoms.pathjobs;
     All of this code is used with permission from Raycoms, one of the developers of the minecolonies project.
  */
 import com.github.alexthe666.iceandfire.IceAndFire;
-import com.github.alexthe666.iceandfire.pathfinding.raycoms.Node;
+import com.github.alexthe666.iceandfire.pathfinding.raycoms.RayNode;
 import com.github.alexthe666.iceandfire.pathfinding.raycoms.RandomPathResult;
 
 import net.minecraft.world.entity.LivingEntity;
@@ -15,8 +15,6 @@ import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
 import java.util.Random;
-
-import com.github.alexthe666.iceandfire.pathfinding.raycoms.pathjobs.AbstractPathJob.SurfaceType;
 
 /**
  * Job that handles random pathing.
@@ -93,7 +91,7 @@ public class PathJobRandomPos extends AbstractPathJob
     }
 
     @Override
-    protected boolean isAtDestination(final Node n)
+    protected boolean isAtDestination(final RayNode n)
     {
         if (Math.sqrt(start.distSqr(n.pos)) > distance && isWalkableSurface(world.getBlockState(n.pos.below()), n.pos.below()) == SurfaceType.WALKABLE) //&& isWalkableSurface(world.getBlockState(n.pos.down()), n.pos.down()) == SurfaceType.WALKABLE)
         {
@@ -104,7 +102,7 @@ public class PathJobRandomPos extends AbstractPathJob
     }
 
     @Override
-    protected double getNodeResultScore(final Node n)
+    protected double getNodeResultScore(final RayNode n)
     {
         //  For Result Score lower is better
         return destination.distSqr(n.pos);

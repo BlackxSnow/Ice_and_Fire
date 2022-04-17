@@ -19,7 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.world.entity.ai.control.MoveControl.Operation;
+// import net.minecraft.world.entity.ai.control.MoveControl.Operation;
 
 public class IafDragonFlightManager {
     private EntityDragonBase dragon;
@@ -170,8 +170,8 @@ public class IafDragonFlightManager {
                 f4 = f1 / f4;
                 f2 = f2 * f4;
                 f3 = f3 * f4;
-                float f5 = Mth.sin(this.mob.yRot * 0.017453292F);
-                float f6 = Mth.cos(this.mob.yRot * 0.017453292F);
+                float f5 = Mth.sin(this.mob.getYRot() * 0.017453292F);
+                float f6 = Mth.cos(this.mob.getYRot() * 0.017453292F);
                 float f7 = f2 * f6 - f3 * f5;
                 float f8 = f3 * f6 + f2 * f5;
                 PathNavigation pathnavigate = this.mob.getNavigation();
@@ -205,7 +205,7 @@ public class IafDragonFlightManager {
                     float ageMod = 1F - Math.min(dragonBase.getAgeInDays(), 125) / 125F;
                     changeRange = 5 + ageMod * 10;
                 }
-                this.mob.yRot = this.rotlerp(this.mob.yRot, targetDegree, changeRange);
+                this.mob.setYRot(this.rotlerp(this.mob.getYRot(), targetDegree, changeRange));
                 this.mob.setSpeed((float) (this.speedModifier * this.mob.getAttribute(Attributes.MOVEMENT_SPEED).getValue()));
                 if (d2 > (double) this.mob.maxUpStep && d0 * d0 + d1 * d1 < (double) Math.max(1.0F, this.mob.getBbWidth() / 2)) {
                     this.mob.getJumpControl().jump();
@@ -235,7 +235,7 @@ public class IafDragonFlightManager {
 
         public void tick() {
             if (dragon.horizontalCollision) {
-                dragon.yRot += 180.0F;
+                dragon.setYRot(dragon.getYRot() + 180.0F);
                 this.speedModifier = 0.1F;
                 dragon.flightManager.target = null;
                 return;
@@ -250,13 +250,13 @@ public class IafDragonFlightManager {
             planeDist = Mth.sqrt(distX * distX + distZ * distZ);
             double dist = Mth.sqrt(distX * distX + distZ * distZ + distY * distY);
             if (dist > 1.0F) {
-                float yawCopy = dragon.yRot;
+                float yawCopy = dragon.getYRot();
                 float atan = (float) Mth.atan2(distZ, distX);
-                float yawTurn = Mth.wrapDegrees(dragon.yRot + 90);
+                float yawTurn = Mth.wrapDegrees(dragon.getYRot() + 90);
                 float yawTurnAtan = Mth.wrapDegrees(atan * 57.295776F);
-                dragon.yRot = IafDragonFlightManager.approachDegrees(yawTurn, yawTurnAtan, dragon.airAttack == IafDragonAttacks.Air.TACKLE && dragon.getTarget() != null ? 10 : 4.0F) - 90.0F;
-                dragon.yBodyRot = dragon.yRot;
-                if (IafDragonFlightManager.degreesDifferenceAbs(yawCopy, dragon.yRot) < 3.0F) {
+                dragon.setYRot(IafDragonFlightManager.approachDegrees(yawTurn, yawTurnAtan, dragon.airAttack == IafDragonAttacks.Air.TACKLE && dragon.getTarget() != null ? 10 : 4.0F) - 90.0F);
+                dragon.yBodyRot = dragon.getYRot();
+                if (IafDragonFlightManager.degreesDifferenceAbs(yawCopy, dragon.getYRot()) < 3.0F) {
                     speedModifier = IafDragonFlightManager.approach((float) speedModifier, 1.8F, 0.005F * (1.8F / (float) speedModifier));
                 } else {
                     speedModifier = IafDragonFlightManager.approach((float) speedModifier, 0.2F, 0.025F);
@@ -265,8 +265,8 @@ public class IafDragonFlightManager {
                     }
                 }
                 float finPitch = (float) (-(Mth.atan2(-distY, planeDist) * 57.2957763671875D));
-                dragon.xRot = finPitch;
-                float yawTurnHead = dragon.yRot + 90.0F;
+                dragon.setXRot(finPitch);
+                float yawTurnHead = dragon.getYRot() + 90.0F;
                 speedModifier *= dragon.getFlightSpeedModifier();
                 speedModifier *= Math.min(1,dist/50+ 0.3);//Make the dragon fly slower when close to target
                 double lvt_16_1_ = speedModifier * Mth.cos(yawTurnHead * 0.017453292F) * Math.abs((double) distX / dist);
@@ -299,7 +299,7 @@ public class IafDragonFlightManager {
             dragon.setDeltaMovement(normalized.x * flySpeed, normalized.y * flySpeed, normalized.z * flySpeed);
             if (dist > 2.5E-7) {
                 float yaw = (float) Math.toDegrees(Math.PI * 2 - Math.atan2(normalized.x, normalized.y));
-                dragon.yRot = rotlerp(dragon.yRot, yaw, 5);
+                dragon.setYRot(rotlerp(dragon.getYRot(), yaw, 5));
                 dragon.setSpeed((float) (speedModifier));
             }
             dragon.move(MoverType.SELF, dragon.getDeltaMovement());

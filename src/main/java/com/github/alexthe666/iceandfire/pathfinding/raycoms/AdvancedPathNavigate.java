@@ -11,12 +11,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.pathfinding.*;
+// import net.minecraft.pathfinding.*;
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.Region;
+// import net.minecraft.world.Region;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
@@ -318,9 +318,10 @@ public class AdvancedPathNavigate extends AbstractAdvancedPathNavigate {
     }
 
     @Override
-    protected boolean canMoveDirectly(final Vec3 start, final Vec3 end, final int sizeX, final int sizeY, final int sizeZ) {
+    protected boolean canMoveDirectly(final Vec3 start, final Vec3 end/*, final int sizeX, final int sizeY, final int sizeZ*/) {
         // TODO improve road walking. This is better in some situations, but still not great.
-        return super.canMoveDirectly(start, end, sizeX, sizeY, sizeZ);
+        // NOTE: This lost the size parameter - important?
+        return super.canMoveDirectly(start, end/*, sizeX, sizeY, sizeZ*/);
     }
 
     public double getSpeedFactor() {
@@ -553,8 +554,9 @@ public class AdvancedPathNavigate extends AbstractAdvancedPathNavigate {
                     final Node point = path.getNode(i);
                     final BlockPos pos = new BlockPos(point.x, point.y, point.z);
                     for (final Node node : AbstractPathJob.lastDebugNodesPath) {
-                        if (node.pos.equals(pos)) {
-                            node.setReachedByWorker();
+                        if (node.asBlockPos().equals(pos)) {
+                            // NOTE: Can't find replacement but is only debug so hopefully not serious.
+                            // node.setReachedByWorker();
                             break;
                         }
                     }

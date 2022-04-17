@@ -2,7 +2,7 @@ package com.github.alexthe666.iceandfire.entity;
 
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.network.PlayMessages;
 
 public class EntityDragonPart extends EntityMutlipartPart {
     private EntityDragonBase dragon;
@@ -10,7 +10,7 @@ public class EntityDragonPart extends EntityMutlipartPart {
         super(t, world);
     }
 
-    public EntityDragonPart(FMLPlayMessages.SpawnEntity spawnEntity, Level worldIn) {
+    public EntityDragonPart(PlayMessages.SpawnEntity spawnEntity, Level worldIn) {
         this(IafEntityRegistry.DRAGON_MULTIPART, worldIn);
     }
 

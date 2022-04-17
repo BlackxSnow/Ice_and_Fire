@@ -8,7 +8,6 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.pathfinding.raycoms.*;
 
 import com.mojang.datafixers.util.Pair;
-import net.minecraft.block.*;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.material.FluidState;
@@ -57,11 +56,11 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public abstract class AbstractPathJob implements Callable<Path> {
     @Nullable
-    public static Set<Node> lastDebugNodesVisited;
+    public static Set<RayNode> lastDebugNodesVisited;
     @Nullable
-    public static Set<Node> lastDebugNodesNotVisited;
+    public static Set<RayNode> lastDebugNodesNotVisited;
     @Nullable
-    public static Set<Node> lastDebugNodesPath;
+    public static Set<RayNode> lastDebugNodesPath;
 
     protected final BlockPos start;
     protected final BlockPos end;
@@ -69,16 +68,16 @@ public abstract class AbstractPathJob implements Callable<Path> {
     protected final LevelReader world;
     protected final PathResult result;
     private int maxRange;
-    private final Queue<Node> nodesOpen = new PriorityQueue<>(500);
-    private final Map<Integer, Node> nodesVisited = new HashMap<>();
+    private final Queue<RayNode> nodesOpen = new PriorityQueue<>(500);
+    private final Map<Integer, RayNode> nodesVisited = new HashMap<>();
     //  Debug Rendering
     protected boolean debugDrawEnabled = false;
     @Nullable
-    protected Set<Node> debugNodesVisited = null;
+    protected Set<RayNode> debugNodesVisited = null;
     @Nullable
-    protected Set<Node> debugNodesNotVisited = null;
+    protected Set<RayNode> debugNodesNotVisited = null;
     @Nullable
-    protected Set<Node> debugNodesPath = null;
+    protected Set<RayNode> debugNodesPath = null;
     /**
      * The entity this job belongs to.
      */
@@ -136,7 +135,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
      * @param range  maximum path range.
      * @param result path result.
      * @param entity the entity.
-     * @see AbstractPathJob#AbstractPathJob(World, BlockPos, BlockPos, int, LivingEntity)
+     //* @see AbstractPathJob#AbstractPathJob(World, BlockPos, BlockPos, int, LivingEntity)
      */
     public AbstractPathJob(final Level world, final BlockPos start, final BlockPos end, final int range, final PathResult result, final LivingEntity entity) {
         final int minX = Math.min(start.getX(), end.getX()) - (range / 2);
@@ -170,7 +169,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
      * @param endRestriction   end of restricted area.
      * @param result           path result.
      * @param entity           the entity.
-     * @see AbstractPathJob#AbstractPathJob(World, BlockPos, BlockPos, int, LivingEntity)
+     //* @see AbstractPathJob#AbstractPathJob(World, BlockPos, BlockPos, int, LivingEntity)
      */
     public AbstractPathJob(final Level world, final BlockPos startRestriction, final BlockPos endRestriction, final PathResult result, final LivingEntity entity) {
         this.minX = Math.min(startRestriction.getX(), endRestriction.getX());
@@ -201,8 +200,8 @@ public abstract class AbstractPathJob implements Callable<Path> {
         this.entity = new WeakReference<>(entity);
     }
 
-    private static boolean onLadderGoingUp(final Node currentNode, final BlockPos dPos) {
-        return currentNode.isLadder() && (dPos.getY() >= 0 || dPos.getX() != 0 || dPos.getZ() != 0);
+    private static boolean onLadderGoingUp(final RayNode currentRayNode, final BlockPos dPos) {
+        return currentRayNode.isLadder() && (dPos.getY() >= 0 || dPos.getX() != 0 || dPos.getZ() != 0);
     }
 
     /**
@@ -294,13 +293,13 @@ public abstract class AbstractPathJob implements Callable<Path> {
     /**
      * Checks if entity is on a ladder.
      *
-     * @param node       the path node.
+     * @param rayNode       the path node.
      * @param nextInPath the next path point.
      * @param pos        the position.
      * @return true if on a ladder.
      */
-    private static boolean onALadder(final Node node, @Nullable final Node nextInPath, final BlockPos pos) {
-        return nextInPath != null && node.isLadder()
+    private static boolean onALadder(final RayNode rayNode, @Nullable final RayNode nextInPath, final BlockPos pos) {
+        return nextInPath != null && rayNode.isLadder()
                 &&
                 (nextInPath.pos.getX() == pos.getX() && nextInPath.pos.getZ() == pos.getZ());
     }
@@ -318,12 +317,12 @@ public abstract class AbstractPathJob implements Callable<Path> {
                 | (pos.getZ() & 0xFFF);
     }
 
-    private static boolean nodeClosed(@Nullable final Node node) {
-        return node != null && node.isClosed();
+    private static boolean nodeClosed(@Nullable final RayNode rayNode) {
+        return rayNode != null && rayNode.isClosed();
     }
 
-    private static boolean calculateSwimming(final LevelReader world, final BlockPos pos, @Nullable final Node node) {
-        return (node == null) ? world.getBlockState(pos.below()).getMaterial().isLiquid() : node.isSwimming();
+    private static boolean calculateSwimming(final LevelReader world, final BlockPos pos, @Nullable final RayNode rayNode) {
+        return (rayNode == null) ? world.getBlockState(pos.below()).getMaterial().isLiquid() : rayNode.isSwimming();
     }
 
     public static Direction getXZFacing(final BlockPos pos, final BlockPos neighbor) {
@@ -422,7 +421,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
      */
     @Nullable
     protected Path search() {
-        Node bestNode = getAndSetupStartNode();
+        RayNode bestRayNode = getAndSetupStartNode();
 
         double bestNodeResultScore = Double.MAX_VALUE;
 
@@ -431,7 +430,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
                 return null;
             }
 
-            final Node currentNode = nodesOpen.poll();
+            final RayNode currentRayNode = nodesOpen.poll();
 
             totalNodesVisited++;
 
@@ -439,122 +438,122 @@ public abstract class AbstractPathJob implements Callable<Path> {
             if (totalNodesVisited > IafConfig.maxDragonPathingNodes || totalNodesVisited > maxRange * maxRange) {
                 break;
             }
-            currentNode.setCounterVisited(totalNodesVisited);
+            currentRayNode.setCounterVisited(totalNodesVisited);
 
-            handleDebugOptions(currentNode);
-            currentNode.setClosed();
+            handleDebugOptions(currentRayNode);
+            currentRayNode.isClosed();
 
-            if (isAtDestination(currentNode)) {
-                bestNode = currentNode;
+            if (isAtDestination(currentRayNode)) {
+                bestRayNode = currentRayNode;
                 result.setPathReachesDestination(true);
                 break;
             }
 
             //  If this is the closest node to our destination, treat it as our best node
             final double nodeResultScore =
-                    getNodeResultScore(currentNode);
+                    getNodeResultScore(currentRayNode);
             if (nodeResultScore < bestNodeResultScore) {
-                bestNode = currentNode;
+                bestRayNode = currentRayNode;
                 bestNodeResultScore = nodeResultScore;
             }
 
-            if (!xzRestricted || (currentNode.pos.getX() >= minX && currentNode.pos.getX() <= maxX && currentNode.pos.getZ() >= minZ && currentNode.pos.getZ() <= maxZ)) {
-                walkCurrentNode(currentNode);
+            if (!xzRestricted || (currentRayNode.pos.getX() >= minX && currentRayNode.pos.getX() <= maxX && currentRayNode.pos.getZ() >= minZ && currentRayNode.pos.getZ() <= maxZ)) {
+                walkCurrentNode(currentRayNode);
             }
         }
 
-        final Path path = finalizePath(bestNode);
+        final Path path = finalizePath(bestRayNode);
 
         handleDebugDraw();
 
         return path;
     }
 
-    private void handleDebugOptions(final Node currentNode) {
+    private void handleDebugOptions(final RayNode currentRayNode) {
         if (debugDrawEnabled) {
-            addNodeToDebug(currentNode);
+            addNodeToDebug(currentRayNode);
         }
 
         if (Pathfinding.isDebug()) {
             IceAndFire.LOGGER.info(String.format("Examining node [%d,%d,%d] ; g=%f ; f=%f",
-                    currentNode.pos.getX(), currentNode.pos.getY(), currentNode.pos.getZ(), currentNode.getCost(), currentNode.getScore()));
+                    currentRayNode.pos.getX(), currentRayNode.pos.getY(), currentRayNode.pos.getZ(), currentRayNode.getCost(), currentRayNode.getScore()));
         }
     }
 
-    private void addNodeToDebug(final Node currentNode) {
-        debugNodesNotVisited.remove(currentNode);
-        debugNodesVisited.add(currentNode);
+    private void addNodeToDebug(final RayNode currentRayNode) {
+        debugNodesNotVisited.remove(currentRayNode);
+        debugNodesVisited.add(currentRayNode);
     }
 
-    private void addPathNodeToDebug(final Node node) {
-        debugNodesVisited.remove(node);
-        debugNodesPath.add(node);
+    private void addPathNodeToDebug(final RayNode rayNode) {
+        debugNodesVisited.remove(rayNode);
+        debugNodesPath.add(rayNode);
     }
 
-    private void walkCurrentNode(final Node currentNode) {
+    private void walkCurrentNode(final RayNode currentRayNode) {
         BlockPos dPos = BLOCKPOS_IDENTITY;
-        if (currentNode.parent != null) {
-            dPos = currentNode.pos.subtract(currentNode.parent.pos);
+        if (currentRayNode.parent != null) {
+            dPos = currentRayNode.pos.subtract(currentRayNode.parent.pos);
         }
 
         //  On a ladder, we can go 1 straight-up
-        if (onLadderGoingUp(currentNode, dPos)) {
-            walk(currentNode, BLOCKPOS_UP);
+        if (onLadderGoingUp(currentRayNode, dPos)) {
+            walk(currentRayNode, BLOCKPOS_UP);
         }
 
         //  We can also go down 1, if the lower block is a ladder
-        if (onLadderGoingDown(currentNode, dPos)) {
-            walk(currentNode, BLOCKPOS_DOWN);
+        if (onLadderGoingDown(currentRayNode, dPos)) {
+            walk(currentRayNode, BLOCKPOS_DOWN);
         }
         if (pathingOptions.canClimb()){
             //If the entity can climb and it needs to climb a block higher than 1 block
-            if (getHighest(currentNode.pos).getFirst()>1){
-                walk(currentNode,BLOCKPOS_IDENTITY.above(getHighest(currentNode.pos).getFirst()));
+            if (getHighest(currentRayNode.pos).getFirst()>1){
+                walk(currentRayNode,BLOCKPOS_IDENTITY.above(getHighest(currentRayNode.pos).getFirst()));
             }
             //After entity has climbed something step forward
-            if (currentNode.parent != null && dPos.getX() == 0 && dPos.getZ() == 0 && dPos.getY() > 1){
+            if (currentRayNode.parent != null && dPos.getX() == 0 && dPos.getZ() == 0 && dPos.getY() > 1){
                     //Step forwards into the direction we climbed from
-                if (getHighest(currentNode.parent.pos).getSecond() != null)
-                    walk(currentNode, getHighest(currentNode.parent.pos).getSecond());
+                if (getHighest(currentRayNode.parent.pos).getSecond() != null)
+                    walk(currentRayNode, getHighest(currentRayNode.parent.pos).getSecond());
             }
         }
 
         // Only explore downwards when dropping
-        if ((currentNode.parent == null || !currentNode.parent.pos.equals(currentNode.pos.below())) && currentNode.isCornerNode()) {
-            walk(currentNode, BLOCKPOS_DOWN);
+        if ((currentRayNode.parent == null || !currentRayNode.parent.pos.equals(currentRayNode.pos.below())) && currentRayNode.isCornerNode()) {
+            walk(currentRayNode, BLOCKPOS_DOWN);
             return;
         }
 
         // Walk downwards node if passable
-        if ((circumventSizeCheck && isPassable(currentNode.pos.below(),true))
-                ||currentNode.parent != null && isPassableBBDown(currentNode.parent.pos, currentNode.pos.below())) {
-            walk(currentNode, BLOCKPOS_DOWN);
+        if ((circumventSizeCheck && isPassable(currentRayNode.pos.below(),true))
+                || currentRayNode.parent != null && isPassableBBDown(currentRayNode.parent.pos, currentRayNode.pos.below())) {
+            walk(currentRayNode, BLOCKPOS_DOWN);
         }
 
         // N
         if (dPos.getZ() <= 0) {
-            walk(currentNode, BLOCKPOS_NORTH);
+            walk(currentRayNode, BLOCKPOS_NORTH);
         }
 
         // E
         if (dPos.getX() >= 0) {
-            walk(currentNode, BLOCKPOS_EAST);
+            walk(currentRayNode, BLOCKPOS_EAST);
         }
 
         // S
         if (dPos.getZ() >= 0) {
-            walk(currentNode, BLOCKPOS_SOUTH);
+            walk(currentRayNode, BLOCKPOS_SOUTH);
         }
 
         // W
         if (dPos.getX() <= 0) {
-            walk(currentNode, BLOCKPOS_WEST);
+            walk(currentRayNode, BLOCKPOS_WEST);
         }
 
 
     }
-    private boolean onLadderGoingDown(final Node currentNode, final BlockPos dPos) {
-        return (dPos.getY() <= 0 || dPos.getX() != 0 || dPos.getZ() != 0) && isLadder(currentNode.pos.below());
+    private boolean onLadderGoingDown(final RayNode currentRayNode, final BlockPos dPos) {
+        return (dPos.getY() <= 0 || dPos.getX() != 0 || dPos.getZ() != 0) && isLadder(currentRayNode.pos.below());
     }
 
     private void handleDebugDraw() {
@@ -567,74 +566,74 @@ public abstract class AbstractPathJob implements Callable<Path> {
         }
     }
 
-    private Node getAndSetupStartNode() {
-        Node startNode = new Node(start, computeHeuristic(start));
+    private RayNode getAndSetupStartNode() {
+        RayNode startRayNode = new RayNode(start, computeHeuristic(start));
         //If the entity is Flying set the start node to the end node
         //Basically letting it's pathfinder do the pathfinding
         if (pathingOptions.isFlying()){
-            startNode = new Node(end, computeHeuristic(end));
+            startRayNode = new RayNode(end, computeHeuristic(end));
         }
         if (isLadder(start)) {
-            startNode.setLadder();
+            startRayNode.setLadder();
         } else if (world.getBlockState(start.below()).getMaterial().isLiquid()) {
-            startNode.setSwimming();
+            startRayNode.setSwimming();
         }
 
-        startNode.setOnRails(pathingOptions.canUseRails() && world.getBlockState(start).getBlock() instanceof BaseRailBlock);
+        startRayNode.setOnRails(pathingOptions.canUseRails() && world.getBlockState(start).getBlock() instanceof BaseRailBlock);
 
-        nodesOpen.offer(startNode);
-        nodesVisited.put(computeNodeKey(start), startNode);
+        nodesOpen.offer(startRayNode);
+        nodesVisited.put(computeNodeKey(start), startRayNode);
 
         ++totalNodesAdded;
 
-        return startNode;
+        return startRayNode;
     }
 
     /**
      * Generate the path to the target node.
      *
-     * @param targetNode the node to path to.
+     * @param targetRayNode the node to path to.
      * @return the path.
      */
 
-    private Path finalizePath(final Node targetNode) {
+    private Path finalizePath(final RayNode targetRayNode) {
         //  Compute length of path, since we need to allocate an array.  This is cheaper/faster than building a List
         //  and converting it.  Yes, we have targetNode.steps, but I do not want to rely on that being accurate (I might
         //  fudge that value later on for cutoff purposes
         int pathLength = 1;
         int railsLength = 0;
-        @Nullable Node node = targetNode;
-        while (node.parent != null) {
+        @Nullable RayNode rayNode = targetRayNode;
+        while (rayNode.parent != null) {
             ++pathLength;
-            if (node.isOnRails()) {
+            if (rayNode.isOnRails()) {
                 ++railsLength;
             }
-            node = node.parent;
+            rayNode = rayNode.parent;
         }
 
         final Node[] points = new Node[pathLength];
-        points[0] = new PathPointExtended(node.pos);
+        points[0] = new PathPointExtended(rayNode.pos);
 
-        @Nullable Node nextInPath = null;
-        node = targetNode;
-        while (node.parent != null) {
+        @Nullable RayNode nextInPath = null;
+        rayNode = targetRayNode;
+        while (rayNode.parent != null) {
             if (debugDrawEnabled) {
-                addPathNodeToDebug(node);
+                addPathNodeToDebug(rayNode);
             }
 
             --pathLength;
 
-            final BlockPos pos = node.pos;
+            final BlockPos pos = rayNode.pos;
 
-            if (node.isSwimming()) {
+            if (rayNode.isSwimming()) {
                 //  Not truly necessary but helps prevent them spinning in place at swimming nodes
                 pos.offset(BLOCKPOS_DOWN);
             }
 
             final PathPointExtended p = new PathPointExtended(pos);
             if (railsLength >= 8) {
-                p.setOnRails(node.isOnRails());
-                if (p.isOnRails() && (!node.parent.isOnRails() || node.parent.parent == null)) {
+                p.setOnRails(rayNode.isOnRails());
+                if (p.isOnRails() && (!rayNode.parent.isOnRails() || rayNode.parent.parent == null)) {
                     p.setRailsEntry();
                 } else if (p.isOnRails() && points.length > pathLength + 1) {
                     final PathPointExtended point = ((PathPointExtended) points[pathLength + 1]);
@@ -647,23 +646,23 @@ public abstract class AbstractPathJob implements Callable<Path> {
 
             points[pathLength] = p;
 
-            nextInPath = node;
-            node = node.parent;
+            nextInPath = rayNode;
+            rayNode = rayNode.parent;
         }
 
         doDebugPrinting(points);
 
-        return new Path(Arrays.asList(points), getPathTargetPos(targetNode), isAtDestination(targetNode));
+        return new Path(Arrays.asList(points), getPathTargetPos(targetRayNode), isAtDestination(targetRayNode));
     }
 
     /**
      * Creates the path for the given points
      *
-     * @param finalNode
+     * @param finalRayNode
      * @return
      */
-    protected BlockPos getPathTargetPos(final Node finalNode) {
-        return finalNode.pos;
+    protected BlockPos getPathTargetPos(final RayNode finalRayNode) {
+        return finalRayNode.pos;
     }
 
     /**
@@ -702,7 +701,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
      * @param n Node to test.
      * @return true if the node is a viable destination.
      */
-    protected abstract boolean isAtDestination(Node n);
+    protected abstract boolean isAtDestination(RayNode n);
 
     /**
      * Compute a 'result score' for the Node; if no destination is determined, the node that had the highest 'result' score is used.
@@ -710,7 +709,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
      * @param n Node to test.
      * @return score for the node.
      */
-    protected abstract double getNodeResultScore(Node n);
+    protected abstract double getNodeResultScore(RayNode n);
 
     /**
      * "Walk" from the parent in the direction specified by the delta, determining the new x,y,z position for such a move and adding or updating a node, as appropriate.
@@ -719,7 +718,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
      * @param dPos   Delta from parent, expected in range of [-1..1].
      * @return true if a node was added or updated when attempting to move in the given direction.
      */
-    protected final boolean walk(final Node parent, BlockPos dPos) {
+    protected final boolean walk(final RayNode parent, BlockPos dPos) {
         BlockPos pos = parent.pos.offset(dPos);
 
         //  Can we traverse into this node?  Fix the y up
@@ -752,13 +751,13 @@ public abstract class AbstractPathJob implements Callable<Path> {
         }
 
         int nodeKey = computeNodeKey(pos);
-        Node node = nodesVisited.get(nodeKey);
-        if (nodeClosed(node)) {
+        RayNode rayNode = nodesVisited.get(nodeKey);
+        if (nodeClosed(rayNode)) {
             //  Early out on closed nodes (closed = expanded from)
             return false;
         }
 
-        final boolean isSwimming = calculateSwimming(world, pos, node);
+        final boolean isSwimming = calculateSwimming(world, pos, rayNode);
 
         if (isSwimming && !pathingOptions.canSwim()) {
             return false;
@@ -774,15 +773,15 @@ public abstract class AbstractPathJob implements Callable<Path> {
         final double cost = parent.getCost() + stepCost;
         final double score = cost + heuristic;
 
-        if (node == null) {
-            node = createNode(parent, pos, nodeKey, isSwimming, heuristic, cost, score);
-            node.setOnRails(onRails);
-            node.setCornerNode(corner);
-        } else if (updateCurrentNode(parent, node, heuristic, cost, score)) {
+        if (rayNode == null) {
+            rayNode = createNode(parent, pos, nodeKey, isSwimming, heuristic, cost, score);
+            rayNode.setOnRails(onRails);
+            rayNode.setCornerNode(corner);
+        } else if (updateCurrentNode(parent, rayNode, heuristic, cost, score)) {
             return false;
         }
 
-        nodesOpen.offer(node);
+        nodesOpen.offer(rayNode);
 
         //If we climbed something skip jumpPointSearch
         //This is a workaround so that the path generated doesn't go through blocks
@@ -795,47 +794,47 @@ public abstract class AbstractPathJob implements Callable<Path> {
 
         return true;
     }
-    private void performJumpPointSearch(final Node parent, final BlockPos dPos, final Node node) {
-        if (allowJumpPointSearchTypeWalk && node.getHeuristic() <= parent.getHeuristic()) {
-            walk(node, dPos);
+    private void performJumpPointSearch(final RayNode parent, final BlockPos dPos, final RayNode rayNode) {
+        if (allowJumpPointSearchTypeWalk && rayNode.getHeuristic() <= parent.getHeuristic()) {
+            walk(rayNode, dPos);
         }
     }
-    private Node createNode(
-            final Node parent, final BlockPos pos, final int nodeKey,
+    private RayNode createNode(
+            final RayNode parent, final BlockPos pos, final int nodeKey,
             final boolean isSwimming, final double heuristic, final double cost, final double score) {
-        final Node node;
-        node = new Node(parent, pos, cost, heuristic, score);
-        nodesVisited.put(nodeKey, node);
+        final RayNode rayNode;
+        rayNode = new RayNode(parent, pos, cost, heuristic, score);
+        nodesVisited.put(nodeKey, rayNode);
         if (debugDrawEnabled) {
-            debugNodesNotVisited.add(node);
+            debugNodesNotVisited.add(rayNode);
         }
 
         if (isLadder(pos)) {
-            node.setLadder();
+            rayNode.setLadder();
         } else if (isSwimming) {
-            node.setSwimming();
+            rayNode.setSwimming();
         }
 
         totalNodesAdded++;
-        node.setCounterAdded(totalNodesAdded);
-        return node;
+        rayNode.setCounterAdded(totalNodesAdded);
+        return rayNode;
     }
 
-    private boolean updateCurrentNode(final Node parent, final Node node, final double heuristic, final double cost, final double score) {
+    private boolean updateCurrentNode(final RayNode parent, final RayNode rayNode, final double heuristic, final double cost, final double score) {
         //  This node already exists
-        if (score >= node.getScore()) {
+        if (score >= rayNode.getScore()) {
             return true;
         }
 
-        if (!nodesOpen.remove(node)) {
+        if (!nodesOpen.remove(rayNode)) {
             return true;
         }
 
-        node.parent = parent;
-        node.setSteps(parent.getSteps() + 1);
-        node.setCost(cost);
-        node.setHeuristic(heuristic);
-        node.setScore(score);
+        rayNode.parent = parent;
+        rayNode.setSteps(parent.getSteps() + 1);
+        rayNode.setCost(cost);
+        rayNode.setHeuristic(heuristic);
+        rayNode.setScore(score);
         return false;
     }
 
@@ -846,7 +845,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
      * @param pos    coordinate of block.
      * @return y height of first open, viable block above ground, or -1 if blocked or too far a drop.
      */
-    protected int getGroundHeight(final Node parent, final BlockPos pos) {
+    protected int getGroundHeight(final RayNode parent, final BlockPos pos) {
         //  Check (y+1) first, as it's always needed, either for the upper body (level),
         //  lower body (headroom drop) or lower body (jump up)
         if (checkHeadBlock(parent, pos)) {
@@ -882,7 +881,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
         return handleNotStanding(parent, pos, below);
     }
 
-    private int handleNotStanding(@Nullable final Node parent, final BlockPos pos, final BlockState below) {
+    private int handleNotStanding(@Nullable final RayNode parent, final BlockPos pos, final BlockState below) {
         final boolean isSwimming = parent != null && parent.isSwimming();
 
         if (below.getMaterial().isLiquid()) {
@@ -896,7 +895,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
         return checkDrop(parent, pos, isSwimming);
     }
 
-    private int checkDrop(@Nullable final Node parent, final BlockPos pos, final boolean isSwimming) {
+    private int checkDrop(@Nullable final RayNode parent, final BlockPos pos, final boolean isSwimming) {
         final boolean canDrop = parent != null && !parent.isLadder();
         boolean isChonker = true;
 
@@ -939,7 +938,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
         return -1;
     }
 
-    private int handleTargetNotPassable(@Nullable final Node parent, final BlockPos pos, final BlockState target) {
+    private int handleTargetNotPassable(@Nullable final RayNode parent, final BlockPos pos, final BlockState target) {
         final boolean canJump = parent != null && !parent.isLadder() && !parent.isSwimming();
         //  Need to try jumping up one, if we can
         if (!canJump || isWalkableSurface(target, pos) != SurfaceType.WALKABLE) {
@@ -1021,7 +1020,7 @@ public abstract class AbstractPathJob implements Callable<Path> {
         }
         return i;
     }
-    private boolean checkHeadBlock(@Nullable final Node parent, final BlockPos pos) {
+    private boolean checkHeadBlock(@Nullable final RayNode parent, final BlockPos pos) {
         BlockPos localPos = pos;
         final VoxelShape bb = world.getBlockState(localPos).getCollisionShape(world, localPos);
         if (bb.max(Direction.Axis.Y) < 1) {
