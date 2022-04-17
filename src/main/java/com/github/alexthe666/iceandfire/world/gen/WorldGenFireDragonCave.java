@@ -16,6 +16,8 @@ import com.mojang.serialization.Codec;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
+import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfiguration;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -60,7 +62,13 @@ public class WorldGenFireDragonCave extends Feature<NoneFeatureConfiguration> {
     }
 
     @Override
-    public boolean place(WorldGenLevel worldIn, ChunkGenerator p_230362_3_, Random rand, BlockPos position, NoneFeatureConfiguration p_230362_6_) {
+    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context)
+    {
+        return place(context.config(), context.level(), context.chunkGenerator(), context.random(), context.origin());
+    }
+
+    @Override
+    public boolean place(NoneFeatureConfiguration configuration, WorldGenLevel worldIn, ChunkGenerator p_230362_3_, Random rand, BlockPos position) {
         if(!IafWorldRegistry.isDimensionListedForDragons(worldIn)){
             return false;
         }
