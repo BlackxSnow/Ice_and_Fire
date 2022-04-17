@@ -1,7 +1,7 @@
 package com.github.alexthe666.iceandfire.client.model;
 
-import net.minecraft.client.renderer.entity.model.HorseModel;
-import net.minecraft.entity.passive.horse.AbstractHorseEntity;
+import net.minecraft.client.model.HorseModel;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
 
 public class ModelHorseStatue extends HorseModel {
 
@@ -10,7 +10,7 @@ public class ModelHorseStatue extends HorseModel {
     }
 
     @Override
-    public void setRotationAngles(AbstractHorseEntity entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(AbstractHorse entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
 
     }
 }

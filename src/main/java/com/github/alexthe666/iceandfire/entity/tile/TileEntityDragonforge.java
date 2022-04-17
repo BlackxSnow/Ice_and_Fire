@@ -12,40 +12,40 @@ import com.github.alexthe666.iceandfire.message.MessageUpdateDragonforge;
 import com.github.alexthe666.iceandfire.recipe.DragonForgeRecipe;
 import com.github.alexthe666.iceandfire.recipe.IafRecipeRegistry;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.ISidedInventory;
-import net.minecraft.inventory.ItemStackHelper;
-import net.minecraft.inventory.container.Container;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.server.SUpdateTileEntityPacket;
-import net.minecraft.tileentity.ITickableTileEntity;
-import net.minecraft.tileentity.LockableTileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.IntArray;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.WorldlyContainer;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.block.entity.TickableBlockEntity;
+import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
+import net.minecraft.core.Direction;
+import net.minecraft.world.inventory.SimpleContainerData;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 
-public class TileEntityDragonforge extends LockableTileEntity implements ITickableTileEntity, ISidedInventory {
+public class TileEntityDragonforge extends BaseContainerBlockEntity implements TickableBlockEntity, WorldlyContainer {
     private static final int[] SLOTS_TOP = new int[]{0, 1};
     private static final int[] SLOTS_BOTTOM = new int[]{2};
     private static final int[] SLOTS_SIDES = new int[]{0, 1};
     private static final Direction[] HORIZONTALS = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
     public int isFire;
     public int cookTime;
-    net.minecraftforge.items.IItemHandler handlerTop = new net.minecraftforge.items.wrapper.SidedInvWrapper(this, net.minecraft.util.Direction.UP);
-    net.minecraftforge.items.IItemHandler handlerBottom = new net.minecraftforge.items.wrapper.SidedInvWrapper(this, net.minecraft.util.Direction.DOWN);
-    net.minecraftforge.items.IItemHandler handlerSide = new net.minecraftforge.items.wrapper.SidedInvWrapper(this, net.minecraft.util.Direction.WEST);
+    net.minecraftforge.items.IItemHandler handlerTop = new net.minecraftforge.items.wrapper.SidedInvWrapper(this, net.minecraft.core.Direction.UP);
+    net.minecraftforge.items.IItemHandler handlerBottom = new net.minecraftforge.items.wrapper.SidedInvWrapper(this, net.minecraft.core.Direction.DOWN);
+    net.minecraftforge.items.IItemHandler handlerSide = new net.minecraftforge.items.wrapper.SidedInvWrapper(this, net.minecraft.core.Direction.WEST);
     net.minecraftforge.common.util.LazyOptional<? extends net.minecraftforge.items.IItemHandler>[] handlers =
             net.minecraftforge.items.wrapper.SidedInvWrapper.create(this, Direction.UP, Direction.DOWN, Direction.NORTH);
     private NonNullList<ItemStack> forgeItemStacks = NonNullList.withSize(3, ItemStack.EMPTY);
@@ -62,7 +62,7 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
         this.isFire = isFire;
     }
 
-    public int getSizeInventory() {
+    public int getContainerSize() {
         return this.forgeItemStacks.size();
     }
 
@@ -78,11 +78,11 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
 
     private void updateGrills(boolean grill) {
         for (Direction facing : HORIZONTALS) {
-            BlockPos grillPos = this.getPos().offset(facing);
-            if (grillMatches(world.getBlockState(grillPos).getBlock())) {
-                BlockState grillState = getGrillBlock().getDefaultState().with(BlockDragonforgeBricks.GRILL, grill);
-                if (world.getBlockState(grillPos) != grillState) {
-                    world.setBlockState(grillPos, grillState);
+            BlockPos grillPos = this.getBlockPos().relative(facing);
+            if (grillMatches(level.getBlockState(grillPos).getBlock())) {
+                BlockState grillState = getGrillBlock().defaultBlockState().setValue(BlockDragonforgeBricks.GRILL, grill);
+                if (level.getBlockState(grillPos) != grillState) {
+                    level.setBlockAndUpdate(grillPos, grillState);
                 }
             }
         }
@@ -114,48 +114,48 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
         return false;
     }
 
-    public ItemStack getStackInSlot(int index) {
+    public ItemStack getItem(int index) {
         return this.forgeItemStacks.get(index);
     }
 
-    public ItemStack decrStackSize(int index, int count) {
-        return ItemStackHelper.getAndSplit(this.forgeItemStacks, index, count);
+    public ItemStack removeItem(int index, int count) {
+        return ContainerHelper.removeItem(this.forgeItemStacks, index, count);
     }
 
-    public ItemStack removeStackFromSlot(int index) {
-        return ItemStackHelper.getAndRemove(this.forgeItemStacks, index);
+    public ItemStack removeItemNoUpdate(int index) {
+        return ContainerHelper.takeItem(this.forgeItemStacks, index);
     }
 
-    public void setInventorySlotContents(int index, ItemStack stack) {
+    public void setItem(int index, ItemStack stack) {
         ItemStack itemstack = this.forgeItemStacks.get(index);
-        boolean flag = !stack.isEmpty() && stack.isItemEqual(itemstack) && ItemStack.areItemStackTagsEqual(stack, itemstack);
+        boolean flag = !stack.isEmpty() && stack.sameItem(itemstack) && ItemStack.tagMatches(stack, itemstack);
         this.forgeItemStacks.set(index, stack);
 
-        if (stack.getCount() > this.getInventoryStackLimit()) {
-            stack.setCount(this.getInventoryStackLimit());
+        if (stack.getCount() > this.getMaxStackSize()) {
+            stack.setCount(this.getMaxStackSize());
         }
 
         if (index == 0 && !flag || this.cookTime > this.getMaxCookTime(forgeItemStacks.get(0), forgeItemStacks.get(1))) {
             this.cookTime = 0;
-            this.markDirty();
+            this.setChanged();
         }
     }
 
-    public void read(BlockState state, CompoundNBT compound) {
-        super.read(state, compound);
-        this.forgeItemStacks = NonNullList.withSize(this.getSizeInventory(), ItemStack.EMPTY);
-        ItemStackHelper.loadAllItems(compound, this.forgeItemStacks);
+    public void load(BlockState state, CompoundTag compound) {
+        super.load(state, compound);
+        this.forgeItemStacks = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
+        ContainerHelper.loadAllItems(compound, this.forgeItemStacks);
         this.cookTime = compound.getInt("CookTime");
     }
 
-    public CompoundNBT write(CompoundNBT compound) {
-        super.write(compound);
+    public CompoundTag save(CompoundTag compound) {
+        super.save(compound);
         compound.putInt("CookTime", (short) this.cookTime);
-        ItemStackHelper.saveAllItems(compound, this.forgeItemStacks);
+        ContainerHelper.saveAllItems(compound, this.forgeItemStacks);
         return compound;
     }
 
-    public int getInventoryStackLimit() {
+    public int getMaxStackSize() {
         return 64;
     }
 
@@ -196,9 +196,9 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
             lastDragonFlameTimer--;
         }
         updateGrills(assembled());
-        if (!world.isRemote) {
+        if (!level.isClientSide) {
             if (prevAssembled != assembled()) {
-                BlockDragonforgeCore.setState(isFire, prevAssembled, world, pos);
+                BlockDragonforgeCore.setState(isFire, prevAssembled, level, worldPosition);
             }
             prevAssembled = this.assembled();
             if (!assembled()) {
@@ -208,10 +208,10 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
         if (cookTime > 0 && this.canSmelt() && lastDragonFlameTimer == 0) {
             this.cookTime--;
         }
-        if(this.getStackInSlot(0).isEmpty() && !world.isRemote){
+        if(this.getItem(0).isEmpty() && !level.isClientSide){
             this.cookTime = 0;
         }
-        if (!this.world.isRemote) {
+        if (!this.level.isClientSide) {
             if (this.isBurning()) {
                 if (this.canSmelt()) {
                     ++this.cookTime;
@@ -222,12 +222,12 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
                     }
                 } else {
                     if(cookTime > 0){
-                        IceAndFire.sendMSGToAll(new MessageUpdateDragonforge(pos.toLong(), cookTime));
+                        IceAndFire.sendMSGToAll(new MessageUpdateDragonforge(worldPosition.asLong(), cookTime));
                         this.cookTime = 0;
                     }
                 }
             } else if (!this.isBurning() && this.cookTime > 0) {
-                this.cookTime = MathHelper.clamp(this.cookTime - 2, 0, getMaxCookTime(forgeItemStacks.get(0), forgeItemStacks.get(1)));
+                this.cookTime = Mth.clamp(this.cookTime - 2, 0, getMaxCookTime(forgeItemStacks.get(0), forgeItemStacks.get(1)));
             }
 
             if (flag != this.isBurning()) {
@@ -236,7 +236,7 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
         }
 
         if (flag1) {
-            this.markDirty();
+            this.setChanged();
         }
         if (!canAddFlameAgain) {
             canAddFlameAgain = true;
@@ -245,7 +245,7 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
 
     public int getMaxCookTime(ItemStack cookStack, ItemStack bloodStack) {
         ItemStack stack = getCurrentResult(cookStack, bloodStack);
-        if (stack.getItem() == Item.getItemFromBlock(IafBlockRegistry.ASH) || stack.getItem() == Item.getItemFromBlock(IafBlockRegistry.DRAGON_ICE)) {
+        if (stack.getItem() == Item.byBlock(IafBlockRegistry.ASH) || stack.getItem() == Item.byBlock(IafBlockRegistry.DRAGON_ICE)) {
             return 100;
         }
         return 1000;
@@ -292,8 +292,8 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
         }
 
         return new DragonForgeRecipe(
-            Ingredient.fromStacks(cookStack),
-                Ingredient.fromStacks(bloodStack),
+            Ingredient.of(cookStack),
+                Ingredient.of(bloodStack),
             new ItemStack(getDefaultOutput()),
                 getTypeID()
         );
@@ -320,23 +320,23 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
         ItemStack outputStack = this.forgeItemStacks.get(2);
         if (
             !outputStack.isEmpty() &&
-            !outputStack.isItemEqual(forgeRecipeOutput)
+            !outputStack.sameItem(forgeRecipeOutput)
         ) {
             return false;
         }
 
         int calculatedOutputCount = outputStack.getCount() + forgeRecipeOutput.getCount();
         return (
-            calculatedOutputCount <= this.getInventoryStackLimit() &&
+            calculatedOutputCount <= this.getMaxStackSize() &&
             calculatedOutputCount <= outputStack.getMaxStackSize()
         );
     }
 
-    public boolean isUsableByPlayer(PlayerEntity player) {
-        if (this.world.getTileEntity(this.pos) != this) {
+    public boolean stillValid(Player player) {
+        if (this.level.getBlockEntity(this.worldPosition) != this) {
             return false;
         } else {
-            return player.getDistanceSq((double) this.pos.getX() + 0.5D, (double) this.pos.getY() + 0.5D, (double) this.pos.getZ() + 0.5D) <= 64.0D;
+            return player.distanceToSqr((double) this.worldPosition.getX() + 0.5D, (double) this.worldPosition.getY() + 0.5D, (double) this.worldPosition.getZ() + 0.5D) <= 64.0D;
         }
     }
 
@@ -361,13 +361,13 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
         bloodStack.shrink(1);
     }
 
-    public void openInventory(PlayerEntity player) {
+    public void startOpen(Player player) {
     }
 
-    public void closeInventory(PlayerEntity player) {
+    public void stopOpen(Player player) {
     }
 
-    public boolean isItemValidForSlot(int index, ItemStack stack) {
+    public boolean canPlaceItem(int index, ItemStack stack) {
         if (index == 2) {
             return false;
         }
@@ -387,11 +387,11 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
         }
     }
 
-    public boolean canInsertItem(int index, ItemStack itemStackIn, Direction direction) {
-        return this.isItemValidForSlot(index, itemStackIn);
+    public boolean canPlaceItemThroughFace(int index, ItemStack itemStackIn, Direction direction) {
+        return this.canPlaceItem(index, itemStackIn);
     }
 
-    public boolean canExtractItem(int index, ItemStack stack, Direction direction) {
+    public boolean canTakeItemThroughFace(int index, ItemStack stack, Direction direction) {
         if (direction == Direction.DOWN && index == 1) {
             Item item = stack.getItem();
 
@@ -413,13 +413,13 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
         return 1;
     }
 
-    public void clear() {
+    public void clearContent() {
         this.forgeItemStacks.clear();
     }
 
     @Override
     public <T> net.minecraftforge.common.util.LazyOptional<T> getCapability(net.minecraftforge.common.capabilities.Capability<T> capability, @Nullable Direction facing) {
-        if (!this.removed && facing != null && capability == net.minecraftforge.items.CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
+        if (!this.remove && facing != null && capability == net.minecraftforge.items.CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
             if (facing == Direction.UP)
                 return handlers[0].cast();
             if (facing == Direction.DOWN)
@@ -431,12 +431,12 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
     }
 
     @Override
-    protected ITextComponent getDefaultName() {
-        return new TranslationTextComponent("container.dragonforge_fire" + DragonType.getNameFromInt(isFire));
+    protected Component getDefaultName() {
+        return new TranslatableComponent("container.dragonforge_fire" + DragonType.getNameFromInt(isFire));
     }
 
     public void transferPower(int i) {
-        if(!world.isRemote){
+        if(!level.isClientSide){
             if (this.canSmelt()) {
                 if (canAddFlameAgain) {
                     cookTime = Math.min(this.getMaxCookTime(forgeItemStacks.get(0), forgeItemStacks.get(1)) + 1, cookTime + i);
@@ -445,7 +445,7 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
             } else {
                 cookTime = 0;
             }
-            IceAndFire.sendMSGToAll(new MessageUpdateDragonforge(pos.toLong(), cookTime));
+            IceAndFire.sendMSGToAll(new MessageUpdateDragonforge(worldPosition.asLong(), cookTime));
         }
         lastDragonFlameTimer = 40;
     }
@@ -472,28 +472,28 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
     }
 
     private boolean checkY(BlockPos pos) {
-        return doesBlockEqual(pos.up(), getBrick()) &&
-                doesBlockEqual(pos.down(), getBrick());
+        return doesBlockEqual(pos.above(), getBrick()) &&
+                doesBlockEqual(pos.below(), getBrick());
     }
 
     @Override
-    public SUpdateTileEntityPacket getUpdatePacket() {
-        return new SUpdateTileEntityPacket(pos, 1, getUpdateTag());
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return new ClientboundBlockEntityDataPacket(worldPosition, 1, getUpdateTag());
     }
 
     @Override
-    public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket packet) {
-        read(this.getBlockState(), packet.getNbtCompound());
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
+        load(this.getBlockState(), packet.getTag());
     }
 
-    public CompoundNBT getUpdateTag() {
-        return this.write(new CompoundNBT());
+    public CompoundTag getUpdateTag() {
+        return this.save(new CompoundTag());
     }
 
     public boolean assembled() {
-        return checkBoneCorners(pos.down()) && checkBrickSlots(pos.down()) &&
-                checkBrickCorners(pos) && atleastThreeAreBricks(pos) && checkY(pos) &&
-                checkBoneCorners(pos.up()) && checkBrickSlots(pos.up());
+        return checkBoneCorners(worldPosition.below()) && checkBrickSlots(worldPosition.below()) &&
+                checkBrickCorners(worldPosition) && atleastThreeAreBricks(worldPosition) && checkY(worldPosition) &&
+                checkBoneCorners(worldPosition.above()) && checkBrickSlots(worldPosition.above());
     }
 
     private Block getBrick() {
@@ -507,13 +507,13 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
     }
 
     private boolean doesBlockEqual(BlockPos pos, Block block) {
-        return world.getBlockState(pos).getBlock() == block;
+        return level.getBlockState(pos).getBlock() == block;
     }
 
     private boolean atleastThreeAreBricks(BlockPos pos) {
         int count = 0;
         for (Direction facing : HORIZONTALS) {
-            if (world.getBlockState(pos.offset(facing)).getBlock() == getBrick()) {
+            if (level.getBlockState(pos.relative(facing)).getBlock() == getBrick()) {
                 count++;
             }
         }
@@ -522,12 +522,12 @@ public class TileEntityDragonforge extends LockableTileEntity implements ITickab
 
     @Nullable
     @Override
-    public Container createMenu(int id, PlayerInventory playerInventory, PlayerEntity player) {
-        return new ContainerDragonForge(id, this, playerInventory, new IntArray(0));
+    public AbstractContainerMenu createMenu(int id, Inventory playerInventory, Player player) {
+        return new ContainerDragonForge(id, this, playerInventory, new SimpleContainerData(0));
     }
 
     @Override
-    protected Container createMenu(int id, PlayerInventory player) {
-        return new ContainerDragonForge(id, this, player, new IntArray(0));
+    protected AbstractContainerMenu createMenu(int id, Inventory player) {
+        return new ContainerDragonForge(id, this, player, new SimpleContainerData(0));
     }
 }

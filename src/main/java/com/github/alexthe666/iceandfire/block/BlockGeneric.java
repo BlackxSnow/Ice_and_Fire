@@ -4,25 +4,25 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.EntityDreadMob;
 import com.github.alexthe666.iceandfire.entity.util.DragonUtils;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.entity.Entity;
 import net.minecraftforge.common.ToolType;
 
-import net.minecraft.block.AbstractBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public class BlockGeneric extends Block {
     public BlockGeneric(Material materialIn, String name, String toolUsed, int toolStrength, float hardness, float resistance, SoundType sound) {
         super(
-    		AbstractBlock.Properties
-    			.create(materialIn)
+    		BlockBehaviour.Properties
+    			.of(materialIn)
     			.sound(sound)
-    			.hardnessAndResistance(hardness, resistance)
+    			.strength(hardness, resistance)
     			.harvestTool(ToolType.get(toolUsed))
     			.harvestLevel(toolStrength)
-    			.setRequiresTool()
+    			.requiresCorrectToolForDrops()
 		);
 
         this.setRegistryName(IceAndFire.MODID, name);
@@ -30,13 +30,13 @@ public class BlockGeneric extends Block {
 
     public BlockGeneric(Material materialIn, String name, String toolUsed, int toolStrength, float hardness, float resistance, SoundType sound, boolean slippery) {
         super(
-    		AbstractBlock.Properties
-    			.create(materialIn)
+    		BlockBehaviour.Properties
+    			.of(materialIn)
     			.sound(sound)
-    			.hardnessAndResistance(hardness, resistance)
+    			.strength(hardness, resistance)
     			.harvestTool(ToolType.get(toolUsed))
     			.harvestLevel(toolStrength)
-    			.slipperiness(0.98F)
+    			.friction(0.98F)
 		);
 
         this.setRegistryName(IceAndFire.MODID, name);

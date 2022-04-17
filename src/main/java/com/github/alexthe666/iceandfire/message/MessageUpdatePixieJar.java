@@ -5,9 +5,9 @@ import java.util.function.Supplier;
 import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.tile.TileEntityJar;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -25,11 +25,11 @@ public class MessageUpdatePixieJar {
     public MessageUpdatePixieJar() {
     }
 
-    public static MessageUpdatePixieJar read(PacketBuffer buf) {
+    public static MessageUpdatePixieJar read(FriendlyByteBuf buf) {
         return new MessageUpdatePixieJar(buf.readLong(), buf.readBoolean());
     }
 
-    public static void write(MessageUpdatePixieJar message, PacketBuffer buf) {
+    public static void write(MessageUpdatePixieJar message, FriendlyByteBuf buf) {
         buf.writeLong(message.blockPos);
         buf.writeBoolean(message.isProducing);
     }
@@ -40,16 +40,16 @@ public class MessageUpdatePixieJar {
 
         public static void handle(MessageUpdatePixieJar message, Supplier<NetworkEvent.Context> context) {
             context.get().setPacketHandled(true);
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             if(context.get().getDirection().getReceptionSide() == LogicalSide.CLIENT){
                 player = IceAndFire.PROXY.getClientSidePlayer();
             }
             if (player != null) {
-                if (player.world != null) {
-                    BlockPos pos = BlockPos.fromLong(message.blockPos);
-                    if (player.world.getTileEntity(pos) != null) {
-                        if (player.world.getTileEntity(pos) instanceof TileEntityJar) {
-                            TileEntityJar jar = (TileEntityJar) player.world.getTileEntity(pos);
+                if (player.level != null) {
+                    BlockPos pos = BlockPos.of(message.blockPos);
+                    if (player.level.getBlockEntity(pos) != null) {
+                        if (player.level.getBlockEntity(pos) instanceof TileEntityJar) {
+                            TileEntityJar jar = (TileEntityJar) player.level.getBlockEntity(pos);
                             jar.hasProduced = message.isProducing;
                         }
                     }

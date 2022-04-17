@@ -18,59 +18,59 @@ import com.github.alexthe666.iceandfire.message.MessageUpdatePixieHouse;
 import com.github.alexthe666.iceandfire.misc.IafSoundRegistry;
 import com.google.common.base.Predicate;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.AgeableEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ILivingEntityData;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.ai.controller.MovementController;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.AgableMob;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.ai.goal.LookAtGoal;
-import net.minecraft.entity.ai.goal.LookRandomlyGoal;
-import net.minecraft.entity.ai.goal.SwimGoal;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.potion.Effect;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.Hand;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
 import net.minecraft.util.math.RayTraceContext;
 import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.IServerWorld;
-import net.minecraft.world.World;
-import net.minecraft.world.gen.Heightmap;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.server.level.ServerLevel;
 
-public class EntityPixie extends TameableEntity {
+public class EntityPixie extends TamableAnimal {
 
     public static final float[][] PARTICLE_RGB = new float[][]{new float[]{1F, 0.752F, 0.792F}, new float[]{0.831F, 0.662F, 1F}, new float[]{0.513F, 0.843F, 1F}, new float[]{0.654F, 0.909F, 0.615F}, new float[]{0.996F, 0.788F, 0.407F}};
-    private static final DataParameter<Integer> COLOR = EntityDataManager.createKey(EntityPixie.class, DataSerializers.VARINT);
-    private static final DataParameter<Integer> COMMAND = EntityDataManager.createKey(EntityHippogryph.class, DataSerializers.VARINT);
+    private static final EntityDataAccessor<Integer> COLOR = SynchedEntityData.defineId(EntityPixie.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> COMMAND = SynchedEntityData.defineId(EntityHippogryph.class, EntityDataSerializers.INT);
 
     public static final int STEAL_COOLDOWN = 3000;
 
-    public Effect[] positivePotions = new Effect[]{Effects.STRENGTH, Effects.JUMP_BOOST, Effects.SPEED, Effects.LUCK, Effects.HASTE};
-    public Effect[] negativePotions = new Effect[]{Effects.WEAKNESS, Effects.NAUSEA, Effects.SLOWNESS, Effects.UNLUCK, Effects.MINING_FATIGUE};
+    public MobEffect[] positivePotions = new MobEffect[]{MobEffects.DAMAGE_BOOST, MobEffects.JUMP, MobEffects.MOVEMENT_SPEED, MobEffects.LUCK, MobEffects.DIG_SPEED};
+    public MobEffect[] negativePotions = new MobEffect[]{MobEffects.WEAKNESS, MobEffects.CONFUSION, MobEffects.MOVEMENT_SLOWDOWN, MobEffects.UNLUCK, MobEffects.DIG_SLOWDOWN};
     public boolean slowSpeed = false;
     public int ticksUntilHouseAI;
     public int ticksHeldItemFor;
@@ -78,90 +78,90 @@ public class EntityPixie extends TameableEntity {
     public int stealCooldown = 0;
     private boolean isSitting;
 
-    public EntityPixie(EntityType type, World worldIn) {
+    public EntityPixie(EntityType type, Level worldIn) {
         super(type, worldIn);
-        this.moveController = new EntityPixie.AIMoveControl(this);
-        this.experienceValue = 3;
-        this.setDropChance(EquipmentSlotType.MAINHAND, 0F);
+        this.moveControl = new EntityPixie.AIMoveControl(this);
+        this.xpReward = 3;
+        this.setDropChance(EquipmentSlot.MAINHAND, 0F);
     }
 
-    public static BlockPos getPositionRelativetoGround(Entity entity, World world, double x, double z, Random rand) {
-        BlockPos pos = new BlockPos(x, entity.getPosY(), z);
+    public static BlockPos getPositionRelativetoGround(Entity entity, Level world, double x, double z, Random rand) {
+        BlockPos pos = new BlockPos(x, entity.getY(), z);
         for (int yDown = 0; yDown < 3; yDown++) {
-            if (!world.isAirBlock(pos.down(yDown))) {
-                return pos.up(yDown);
+            if (!world.isEmptyBlock(pos.below(yDown))) {
+                return pos.above(yDown);
             }
         }
         return pos;
     }
 
-    public static BlockPos findAHouse(Entity entity, World world) {
+    public static BlockPos findAHouse(Entity entity, Level world) {
         for (int xSearch = -10; xSearch < 10; xSearch++) {
             for (int ySearch = -10; ySearch < 10; ySearch++) {
                 for (int zSearch = -10; zSearch < 10; zSearch++) {
-                    if (world.getTileEntity(entity.getPosition().add(xSearch, ySearch, zSearch)) != null && world.getTileEntity(entity.getPosition().add(xSearch, ySearch, zSearch)) instanceof TileEntityPixieHouse) {
-                        TileEntityPixieHouse house = (TileEntityPixieHouse) world.getTileEntity(entity.getPosition().add(xSearch, ySearch, zSearch));
+                    if (world.getBlockEntity(entity.blockPosition().offset(xSearch, ySearch, zSearch)) != null && world.getBlockEntity(entity.blockPosition().offset(xSearch, ySearch, zSearch)) instanceof TileEntityPixieHouse) {
+                        TileEntityPixieHouse house = (TileEntityPixieHouse) world.getBlockEntity(entity.blockPosition().offset(xSearch, ySearch, zSearch));
                         if (!house.hasPixie) {
-                            return entity.getPosition().add(xSearch, ySearch, zSearch);
+                            return entity.blockPosition().offset(xSearch, ySearch, zSearch);
                         }
                     }
                 }
             }
         }
-        return entity.getPosition();
+        return entity.blockPosition();
     }
 
     public boolean isPixieSitting() {
-        if (world.isRemote) {
-            boolean isSitting = (this.dataManager.get(TAMED).byteValue() & 1) != 0;
+        if (level.isClientSide) {
+            boolean isSitting = (this.entityData.get(DATA_FLAGS_ID).byteValue() & 1) != 0;
             this.isSitting = isSitting;
-            this.setSitting(isSitting);
+            this.setOrderedToSit(isSitting);
             return isSitting;
         }
         return this.isSitting;
     }
 
     public void setPixieSitting(boolean sitting) {
-        if (!world.isRemote) {
+        if (!level.isClientSide) {
             this.isSitting = sitting;
-            this.setQueuedToSit(sitting);
+            this.setInSittingPose(sitting);
         }
-        byte b0 = this.dataManager.get(TAMED).byteValue();
+        byte b0 = this.entityData.get(DATA_FLAGS_ID).byteValue();
         if (sitting) {
-            this.dataManager.set(TAMED, Byte.valueOf((byte) (b0 | 1)));
+            this.entityData.set(DATA_FLAGS_ID, Byte.valueOf((byte) (b0 | 1)));
         } else {
-            this.dataManager.set(TAMED, Byte.valueOf((byte) (b0 & -2)));
+            this.entityData.set(DATA_FLAGS_ID, Byte.valueOf((byte) (b0 & -2)));
         }
     }
 
     @Override
-    public boolean isQueuedToSit() {
+    public boolean isOrderedToSit() {
         return this.isPixieSitting();
     }
 
-    protected int getExperiencePoints(PlayerEntity player) {
+    protected int getExperienceReward(Player player) {
         return 3;
     }
 
-    public static AttributeModifierMap.MutableAttribute bakeAttributes() {
-        return MobEntity.func_233666_p_()
+    public static AttributeSupplier.Builder bakeAttributes() {
+        return Mob.createMobAttributes()
                 //HEALTH
-                .createMutableAttribute(Attributes.MAX_HEALTH, 10D)
+                .add(Attributes.MAX_HEALTH, 10D)
                 //SPEED
-                .createMutableAttribute(Attributes.MOVEMENT_SPEED, 0.25D);
+                .add(Attributes.MOVEMENT_SPEED, 0.25D);
     }
 
-    public boolean attackEntityFrom(DamageSource source, float amount) {
-        if (!this.world.isRemote && this.getRNG().nextInt(3) == 0 && !this.getHeldItem(Hand.MAIN_HAND).isEmpty()) {
-            this.entityDropItem(this.getHeldItem(Hand.MAIN_HAND), 0);
-            this.setHeldItem(Hand.MAIN_HAND, ItemStack.EMPTY);
+    public boolean hurt(DamageSource source, float amount) {
+        if (!this.level.isClientSide && this.getRandom().nextInt(3) == 0 && !this.getItemInHand(InteractionHand.MAIN_HAND).isEmpty()) {
+            this.spawnAtLocation(this.getItemInHand(InteractionHand.MAIN_HAND), 0);
+            this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             this.stealCooldown = STEAL_COOLDOWN;
             return true;
         }
-        if (this.isOwnerClose() && (source == DamageSource.FALLING_BLOCK || source == DamageSource.IN_WALL || this.getOwner() != null && source.getTrueSource() == this.getOwner())) {
+        if (this.isOwnerClose() && (source == DamageSource.FALLING_BLOCK || source == DamageSource.IN_WALL || this.getOwner() != null && source.getEntity() == this.getOwner())) {
             return false;
         }
-        return super.attackEntityFrom(source, amount);
+        return super.hurt(source, amount);
     }
 
     @Override
@@ -169,48 +169,48 @@ public class EntityPixie extends TameableEntity {
         boolean invulnerable = super.isInvulnerableTo(source);
         if(!invulnerable) {
             Entity owner = this.getOwner();
-            if(owner != null && source.getTrueSource() == owner) {
+            if(owner != null && source.getEntity() == owner) {
                 return true;
             }
         }
         return invulnerable;
     }
 
-    public void onDeath(DamageSource cause) {
-        if (!this.world.isRemote && !this.getHeldItem(Hand.MAIN_HAND).isEmpty()) {
-            this.entityDropItem(this.getHeldItem(Hand.MAIN_HAND), 0);
-            this.setHeldItem(Hand.MAIN_HAND, ItemStack.EMPTY);
+    public void die(DamageSource cause) {
+        if (!this.level.isClientSide && !this.getItemInHand(InteractionHand.MAIN_HAND).isEmpty()) {
+            this.spawnAtLocation(this.getItemInHand(InteractionHand.MAIN_HAND), 0);
+            this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         }
-        super.onDeath(cause);
+        super.die(cause);
         //if (cause.getTrueSource() instanceof PlayerEntity) {
         //	((PlayerEntity) cause.getTrueSource()).addStat(ModAchievements.killPixie);
         //}
     }
 
     @Override
-    protected void registerData() {
-        super.registerData();
-        this.dataManager.register(COLOR, Integer.valueOf(0));
-        this.dataManager.register(COMMAND, Integer.valueOf(0));
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(COLOR, Integer.valueOf(0));
+        this.entityData.define(COMMAND, Integer.valueOf(0));
     }
 
-    protected void collideWithEntity(Entity entityIn) {
+    protected void doPush(Entity entityIn) {
         if (this.getOwner() != entityIn) {
-            entityIn.applyEntityCollision(this);
+            entityIn.push(this);
         }
     }
 
-    protected void updateFallState(double y, boolean onGroundIn, BlockState state, BlockPos pos) {
+    protected void checkFallDamage(double y, boolean onGroundIn, BlockState state, BlockPos pos) {
     }
 
-    public ActionResultType getEntityInteractionResult(PlayerEntity player, Hand hand) {
-        if (this.isOwner(player)) {
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        if (this.isOwnedBy(player)) {
 
-            if (player.getHeldItem(hand).getItem() == Items.SUGAR && this.getHealth() < this.getMaxHealth()) {
+            if (player.getItemInHand(hand).getItem() == Items.SUGAR && this.getHealth() < this.getMaxHealth()) {
                 this.heal(5);
-                player.getHeldItem(hand).shrink(1);
+                player.getItemInHand(hand).shrink(1);
                 this.playSound(IafSoundRegistry.PIXIE_TAUNT, 1F, 1F);
-                return ActionResultType.SUCCESS;
+                return InteractionResult.SUCCESS;
             } else {
 
                 // make pixie sit via a check in livingTick() like Hippogryphs work
@@ -219,11 +219,11 @@ public class EntityPixie extends TameableEntity {
                     this.setCommand(0);
                 }
 
-                return ActionResultType.SUCCESS;
+                return InteractionResult.SUCCESS;
             }
-        } else if (player.getHeldItem(hand).getItem() == Item.getItemFromBlock(IafBlockRegistry.JAR_EMPTY) && !this.isTamed()) {
+        } else if (player.getItemInHand(hand).getItem() == Item.byBlock(IafBlockRegistry.JAR_EMPTY) && !this.isTame()) {
             if (!player.isCreative()) {
-                player.getHeldItem(hand).shrink(1);
+                player.getItemInHand(hand).shrink(1);
             }
             Block jar = IafBlockRegistry.JAR_PIXIE_0;
             switch (this.getColor()) {
@@ -244,18 +244,18 @@ public class EntityPixie extends TameableEntity {
                     break;
             }
             ItemStack stack = new ItemStack(jar, 1);
-            if (!world.isRemote) {
-                if (!this.getHeldItem(Hand.MAIN_HAND).isEmpty()) {
-                    this.entityDropItem(this.getHeldItem(Hand.MAIN_HAND), 0.0F);
+            if (!level.isClientSide) {
+                if (!this.getItemInHand(InteractionHand.MAIN_HAND).isEmpty()) {
+                    this.spawnAtLocation(this.getItemInHand(InteractionHand.MAIN_HAND), 0.0F);
                     this.stealCooldown = STEAL_COOLDOWN;
                 }
 
-                this.entityDropItem(stack, 0.0F);
+                this.spawnAtLocation(stack, 0.0F);
             }
             //player.addStat(ModAchievements.jarPixie);
             this.remove();
         }
-        return super.getEntityInteractionResult(player, hand);
+        return super.mobInteract(player, hand);
     }
 
     public void flipAI(boolean flee) {
@@ -265,28 +265,28 @@ public class EntityPixie extends TameableEntity {
     }
 
     protected void registerGoals() {
-        this.goalSelector.addGoal(0, new SwimGoal(this));
+        this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PixieAIFollowOwner(this, 1.0D, 2.0F, 4.0F));
         this.goalSelector.addGoal(2, new PixieAIPickupItem(this, false));
-        this.goalSelector.addGoal(2, new PixieAIFlee(this, PlayerEntity.class, 10, new Predicate<PlayerEntity>() {
+        this.goalSelector.addGoal(2, new PixieAIFlee(this, Player.class, 10, new Predicate<Player>() {
             @Override
-            public boolean apply(@Nullable PlayerEntity entity) {
+            public boolean apply(@Nullable Player entity) {
                 return true;
             }
         }));
         this.goalSelector.addGoal(2, new PixieAISteal(this, 1.0D));
         this.goalSelector.addGoal(3, new PixieAIMoveRandom(this));
         this.goalSelector.addGoal(4, new PixieAIEnterHouse(this));
-        this.goalSelector.addGoal(6, new LookAtGoal(this, PlayerEntity.class, 6.0F));
-        this.goalSelector.addGoal(7, new LookRandomlyGoal(this));
+        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
     }
 
     @Override
     @Nullable
-    public ILivingEntityData onInitialSpawn(IServerWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason, @Nullable ILivingEntityData spawnDataIn, @Nullable CompoundNBT dataTag) {
-        spawnDataIn = super.onInitialSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
-        this.setColor(this.rand.nextInt(5));
-        this.setHeldItem(Hand.MAIN_HAND, ItemStack.EMPTY);
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor worldIn, DifficultyInstance difficultyIn, MobSpawnType reason, @Nullable SpawnGroupData spawnDataIn, @Nullable CompoundTag dataTag) {
+        spawnDataIn = super.finalizeSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
+        this.setColor(this.random.nextInt(5));
+        this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
 
         if(dataTag != null) {
             System.out.println("EntityPixie spawned with dataTag: " + dataTag.toString());
@@ -296,20 +296,20 @@ public class EntityPixie extends TameableEntity {
     }
 
     private boolean isBeyondHeight() {
-        if (this.getPosY() > this.world.getHeight()) {
+        if (this.getY() > this.level.getMaxBuildHeight()) {
             return true;
         }
-        BlockPos height = this.world.getHeight(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, this.getPosition());
+        BlockPos height = this.level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, this.blockPosition());
         int maxY = 20 + height.getY();
-        return this.getPosY() > maxY;
+        return this.getY() > maxY;
     }
 
     public int getCommand() {
-        return Integer.valueOf(this.dataManager.get(COMMAND).intValue());
+        return Integer.valueOf(this.entityData.get(COMMAND).intValue());
     }
 
     public void setCommand(int command) {
-        this.dataManager.set(COMMAND, Integer.valueOf(command));
+        this.entityData.set(COMMAND, Integer.valueOf(command));
         if (command == 1) {
             this.setPixieSitting(true);
         } else {
@@ -318,10 +318,10 @@ public class EntityPixie extends TameableEntity {
     }
 
 
-    public void livingTick() {
-        super.livingTick();
+    public void aiStep() {
+        super.aiStep();
 
-        if (!this.world.isRemote) {
+        if (!this.level.isClientSide) {
 
             // NOTE: This code was taken from EntityHippogryph basically same idea
             if (this.isPixieSitting() && this.getCommand() != 1) {
@@ -331,14 +331,14 @@ public class EntityPixie extends TameableEntity {
                 this.setPixieSitting(true);
             }
             if (this.isPixieSitting()) {
-                this.getNavigator().clearPath();
+                this.getNavigation().stop();
             }
         }
 
         if(stealCooldown > 0) {
             stealCooldown--;
         }
-        if(!this.getHeldItemMainhand().isEmpty() && !this.isTamed()){
+        if(!this.getMainHandItem().isEmpty() && !this.isTame()){
             ticksHeldItemFor++;
         }else{
             ticksHeldItemFor = 0;
@@ -346,33 +346,33 @@ public class EntityPixie extends TameableEntity {
 
 
         if (!this.isPixieSitting() && !this.isBeyondHeight()) {
-            this.setMotion(this.getMotion().add(0, 0.08, 0));
+            this.setDeltaMovement(this.getDeltaMovement().add(0, 0.08, 0));
         } else {
         }
-        if (world.isRemote) {
-            IceAndFire.PROXY.spawnParticle("if_pixie", this.getPosX() + (double) (this.rand.nextFloat() * this.getWidth() * 2F) - (double) this.getWidth(), this.getPosY() + (double) (this.rand.nextFloat() * this.getHeight()), this.getPosZ() + (double) (this.rand.nextFloat() * this.getWidth() * 2F) - (double) this.getWidth(), PARTICLE_RGB[this.getColor()][0], PARTICLE_RGB[this.getColor()][1], PARTICLE_RGB[this.getColor()][2]);
+        if (level.isClientSide) {
+            IceAndFire.PROXY.spawnParticle("if_pixie", this.getX() + (double) (this.random.nextFloat() * this.getBbWidth() * 2F) - (double) this.getBbWidth(), this.getY() + (double) (this.random.nextFloat() * this.getBbHeight()), this.getZ() + (double) (this.random.nextFloat() * this.getBbWidth() * 2F) - (double) this.getBbWidth(), PARTICLE_RGB[this.getColor()][0], PARTICLE_RGB[this.getColor()][1], PARTICLE_RGB[this.getColor()][2]);
         }
         if (ticksUntilHouseAI > 0) {
             ticksUntilHouseAI--;
         }
-        if (!world.isRemote) {
-            if (housePos != null && this.getDistanceSq(Vector3d.copyCentered(housePos)) < 1.5F && world.getTileEntity(housePos) != null && world.getTileEntity(housePos) instanceof TileEntityPixieHouse) {
-                TileEntityPixieHouse house = (TileEntityPixieHouse) world.getTileEntity(housePos);
+        if (!level.isClientSide) {
+            if (housePos != null && this.distanceToSqr(Vec3.atCenterOf(housePos)) < 1.5F && level.getBlockEntity(housePos) != null && level.getBlockEntity(housePos) instanceof TileEntityPixieHouse) {
+                TileEntityPixieHouse house = (TileEntityPixieHouse) level.getBlockEntity(housePos);
                 if (house.hasPixie) {
                     this.housePos = null;
                 } else {
                     house.hasPixie = true;
                     house.pixieType = this.getColor();
-                    house.pixieItems.set(0, this.getHeldItem(Hand.MAIN_HAND));
-                    house.tamedPixie = this.isTamed();
-                    house.pixieOwnerUUID = this.getOwnerId();
-                    IceAndFire.sendMSGToAll(new MessageUpdatePixieHouse(housePos.toLong(), true, this.getColor()));
+                    house.pixieItems.set(0, this.getItemInHand(InteractionHand.MAIN_HAND));
+                    house.tamedPixie = this.isTame();
+                    house.pixieOwnerUUID = this.getOwnerUUID();
+                    IceAndFire.sendMSGToAll(new MessageUpdatePixieHouse(housePos.asLong(), true, this.getColor()));
                     this.remove();
                 }
             }
         }
-        if (this.getOwner() != null && this.isOwnerClose() && this.ticksExisted % 80 == 0) {
-            this.getOwner().addPotionEffect(new EffectInstance(positivePotions[this.getColor()], 100, 0, false, false));
+        if (this.getOwner() != null && this.isOwnerClose() && this.tickCount % 80 == 0) {
+            this.getOwner().addEffect(new MobEffectInstance(positivePotions[this.getColor()], 100, 0, false, false));
         }
         //PlayerEntity player = world.getClosestPlayerToEntity(this, 25);
         //if (player != null) {
@@ -381,17 +381,17 @@ public class EntityPixie extends TameableEntity {
     }
 
     public int getColor() {
-        return MathHelper.clamp(this.getDataManager().get(COLOR).intValue(), 0, 4);
+        return Mth.clamp(this.getEntityData().get(COLOR).intValue(), 0, 4);
     }
 
     public void setColor(int color) {
-        this.getDataManager().set(COLOR, color);
+        this.getEntityData().set(COLOR, color);
     }
 
 
 
     @Override
-    public void readAdditional(CompoundNBT compound) {
+    public void readAdditionalSaveData(CompoundTag compound) {
         this.setColor(compound.getInt("Color"));
 
         this.stealCooldown = compound.getInt("StealCooldown");
@@ -400,22 +400,22 @@ public class EntityPixie extends TameableEntity {
         this.setPixieSitting(compound.getBoolean("PixieSitting"));
         this.setCommand(compound.getInt("Command"));
 
-        super.readAdditional(compound);
+        super.readAdditionalSaveData(compound);
     }
 
     @Override
-    public void writeAdditional(CompoundNBT compound) {
+    public void addAdditionalSaveData(CompoundTag compound) {
         compound.putInt("Color", this.getColor());
         compound.putInt("Command", this.getCommand());
         compound.putInt("StealCooldown", this.stealCooldown);
         compound.putInt("HoldingTicks", this.ticksHeldItemFor);
         compound.putBoolean("PixieSitting", this.isPixieSitting());
-        super.writeAdditional(compound);
+        super.addAdditionalSaveData(compound);
     }
 
     @Nullable
     @Override
-    public AgeableEntity createChild(ServerWorld serverWorld, AgeableEntity ageable) {
+    public AgableMob getBreedOffspring(ServerLevel serverWorld, AgableMob ageable) {
         return null;
     }
 
@@ -428,7 +428,7 @@ public class EntityPixie extends TameableEntity {
     }
 
     public boolean isOwnerClose() {
-        return this.isTamed() && this.getOwner() != null && this.getDistanceSq(this.getOwner()) < 100;
+        return this.isTame() && this.getOwner() != null && this.distanceToSqr(this.getOwner()) < 100;
     }
 
     @Nullable
@@ -446,7 +446,7 @@ public class EntityPixie extends TameableEntity {
         return IafSoundRegistry.PIXIE_DIE;
     }
 
-    class AIMoveControl extends MovementController {
+    class AIMoveControl extends MoveControl {
         public AIMoveControl(EntityPixie pixie) {
             super(pixie);
         }
@@ -456,35 +456,35 @@ public class EntityPixie extends TameableEntity {
             if (EntityPixie.this.slowSpeed) {
                 speedMod = 2F;
             }
-            if (this.action == MovementController.Action.MOVE_TO) {
-                if (EntityPixie.this.collidedHorizontally) {
-                    EntityPixie.this.rotationYaw += 180.0F;
+            if (this.operation == MoveControl.Operation.MOVE_TO) {
+                if (EntityPixie.this.horizontalCollision) {
+                    EntityPixie.this.yRot += 180.0F;
                     speedMod = 0.1F;
-                    BlockPos target = EntityPixie.getPositionRelativetoGround(EntityPixie.this, EntityPixie.this.world, EntityPixie.this.getPosX() + EntityPixie.this.rand.nextInt(15) - 7, EntityPixie.this.getPosZ() + EntityPixie.this.rand.nextInt(15) - 7, EntityPixie.this.rand);
-                    this.posX = target.getX();
-                    this.posY = target.getY();
-                    this.posZ = target.getZ();
+                    BlockPos target = EntityPixie.getPositionRelativetoGround(EntityPixie.this, EntityPixie.this.level, EntityPixie.this.getX() + EntityPixie.this.random.nextInt(15) - 7, EntityPixie.this.getZ() + EntityPixie.this.random.nextInt(15) - 7, EntityPixie.this.random);
+                    this.wantedX = target.getX();
+                    this.wantedY = target.getY();
+                    this.wantedZ = target.getZ();
                 }
-                double d0 = this.posX - EntityPixie.this.getPosX();
-                double d1 = this.posY - EntityPixie.this.getPosY();
-                double d2 = this.posZ - EntityPixie.this.getPosZ();
+                double d0 = this.wantedX - EntityPixie.this.getX();
+                double d1 = this.wantedY - EntityPixie.this.getY();
+                double d2 = this.wantedZ - EntityPixie.this.getZ();
                 double d3 = d0 * d0 + d1 * d1 + d2 * d2;
-                d3 = MathHelper.sqrt(d3);
+                d3 = Mth.sqrt(d3);
 
-                if (d3 < EntityPixie.this.getBoundingBox().getAverageEdgeLength()) {
-                    this.action = MovementController.Action.WAIT;
-                    EntityPixie.this.setMotion(EntityPixie.this.getMotion().mul(0.5D, 0.5D, 0.5D));
+                if (d3 < EntityPixie.this.getBoundingBox().getSize()) {
+                    this.operation = MoveControl.Operation.WAIT;
+                    EntityPixie.this.setDeltaMovement(EntityPixie.this.getDeltaMovement().multiply(0.5D, 0.5D, 0.5D));
                 } else {
-                    EntityPixie.this.setMotion(EntityPixie.this.getMotion().add(d0 / d3 * 0.05D * this.speed * speedMod, d1 / d3 * 0.05D * this.speed * speedMod, d2 / d3 * 0.05D * this.speed * speedMod));
+                    EntityPixie.this.setDeltaMovement(EntityPixie.this.getDeltaMovement().add(d0 / d3 * 0.05D * this.speedModifier * speedMod, d1 / d3 * 0.05D * this.speedModifier * speedMod, d2 / d3 * 0.05D * this.speedModifier * speedMod));
 
-                    if (EntityPixie.this.getAttackTarget() == null) {
-                        EntityPixie.this.rotationYaw = -((float) MathHelper.atan2(EntityPixie.this.getMotion().x, EntityPixie.this.getMotion().z)) * (180F / (float) Math.PI);
-                        EntityPixie.this.renderYawOffset = EntityPixie.this.rotationYaw;
+                    if (EntityPixie.this.getTarget() == null) {
+                        EntityPixie.this.yRot = -((float) Mth.atan2(EntityPixie.this.getDeltaMovement().x, EntityPixie.this.getDeltaMovement().z)) * (180F / (float) Math.PI);
+                        EntityPixie.this.yBodyRot = EntityPixie.this.yRot;
                     } else {
-                        double d4 = EntityPixie.this.getAttackTarget().getPosX() - EntityPixie.this.getPosX();
-                        double d5 = EntityPixie.this.getAttackTarget().getPosZ() - EntityPixie.this.getPosZ();
-                        EntityPixie.this.rotationYaw = -((float) MathHelper.atan2(d4, d5)) * (180F / (float) Math.PI);
-                        EntityPixie.this.renderYawOffset = EntityPixie.this.rotationYaw;
+                        double d4 = EntityPixie.this.getTarget().getX() - EntityPixie.this.getX();
+                        double d5 = EntityPixie.this.getTarget().getZ() - EntityPixie.this.getZ();
+                        EntityPixie.this.yRot = -((float) Mth.atan2(d4, d5)) * (180F / (float) Math.PI);
+                        EntityPixie.this.yBodyRot = EntityPixie.this.yRot;
                     }
                 }
             }

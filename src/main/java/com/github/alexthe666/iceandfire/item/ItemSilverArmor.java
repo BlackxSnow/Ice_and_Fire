@@ -4,33 +4,33 @@ import javax.annotation.Nullable;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.client.renderer.entity.model.BipedModel;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.IArmorMaterial;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ArmorMaterial;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 public class ItemSilverArmor extends ArmorItem {
 
-    public ItemSilverArmor(IArmorMaterial material, EquipmentSlotType slot, String name) {
-        super(material, slot, new Item.Properties().group(IceAndFire.TAB_ITEMS));
+    public ItemSilverArmor(ArmorMaterial material, EquipmentSlot slot, String name) {
+        super(material, slot, new Item.Properties().tab(IceAndFire.TAB_ITEMS));
         this.setRegistryName(IceAndFire.MODID, name);
     }
 
     @OnlyIn(Dist.CLIENT)
     @Nullable
-    public <A extends BipedModel<?>> A getArmorModel(LivingEntity LivingEntity, ItemStack itemStack, EquipmentSlotType armorSlot, A _default) {
-        return (A) IceAndFire.PROXY.getArmorModel(slot == EquipmentSlotType.LEGS ? 15 : 14);
+    public <A extends HumanoidModel<?>> A getArmorModel(LivingEntity LivingEntity, ItemStack itemStack, EquipmentSlot armorSlot, A _default) {
+        return (A) IceAndFire.PROXY.getArmorModel(slot == EquipmentSlot.LEGS ? 15 : 14);
     }
 
     @Nullable
-    public String getArmorTexture(ItemStack stack, Entity entity, EquipmentSlotType slot, String type) {
-        return "iceandfire:textures/models/armor/" + (slot == EquipmentSlotType.LEGS ? "armor_silver_metal_layer_2" : "armor_silver_metal_layer_1") + ".png";
+    public String getArmorTexture(ItemStack stack, Entity entity, EquipmentSlot slot, String type) {
+        return "iceandfire:textures/models/armor/" + (slot == EquipmentSlot.LEGS ? "armor_silver_metal_layer_2" : "armor_silver_metal_layer_1") + ".png";
     }
 
 

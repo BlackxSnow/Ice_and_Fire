@@ -14,8 +14,8 @@ import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceLocation;
 
 @JeiPlugin
 public class IceAndFireJEIPlugin implements IModPlugin {
@@ -26,7 +26,7 @@ public class IceAndFireJEIPlugin implements IModPlugin {
     public static final ResourceLocation LIGHTNING_DRAGON_FORGE_ID = new ResourceLocation("iceandfire:lightning_dragon_forge");
 
     private void addDescription(IRecipeRegistration registry, ItemStack itemStack) {
-        registry.addIngredientInfo(itemStack, VanillaTypes.ITEM, itemStack.getTranslationKey() + ".jei_desc");
+        registry.addIngredientInfo(itemStack, VanillaTypes.ITEM, itemStack.getDescriptionId() + ".jei_desc");
     }
 
     @SuppressWarnings("deprecation")

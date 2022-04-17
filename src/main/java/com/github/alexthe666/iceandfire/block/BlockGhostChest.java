@@ -5,29 +5,29 @@ import com.github.alexthe666.iceandfire.entity.tile.IafTileEntityRegistry;
 import com.github.alexthe666.iceandfire.entity.tile.TileEntityGhostChest;
 import com.github.alexthe666.iceandfire.item.ICustomRendered;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ChestBlock;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
 import net.minecraft.stats.Stat;
 import net.minecraft.stats.Stats;
-import net.minecraft.tileentity.ChestTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.BlockGetter;
 
-import net.minecraft.block.AbstractBlock.Properties;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
 public class BlockGhostChest extends ChestBlock implements ICustomRendered {
 
     public BlockGhostChest() {
         super(
     		Properties
-    			.create(Material.WOOD)
-    			.hardnessAndResistance(2.5F)
+    			.of(Material.WOOD)
+    			.strength(2.5F)
     			.sound(SoundType.WOOD),
 			() -> {
 	            return IafTileEntityRegistry.GHOST_CHEST;
@@ -37,23 +37,23 @@ public class BlockGhostChest extends ChestBlock implements ICustomRendered {
         setRegistryName(IceAndFire.MODID, "ghost_chest");
     }
 
-    public TileEntity createNewTileEntity(IBlockReader worldIn) {
+    public BlockEntity newBlockEntity(BlockGetter worldIn) {
         return new TileEntityGhostChest();
     }
 
-    protected Stat<ResourceLocation> getOpenStat() {
+    protected Stat<ResourceLocation> getOpenChestStat() {
         return Stats.CUSTOM.get(Stats.TRIGGER_TRAPPED_CHEST);
     }
 
-    public boolean canProvidePower(BlockState state) {
+    public boolean isSignalSource(BlockState state) {
         return true;
     }
 
-    public int getWeakPower(BlockState blockState, IBlockReader blockAccess, BlockPos pos, Direction side) {
-        return MathHelper.clamp(ChestTileEntity.getPlayersUsing(blockAccess, pos), 0, 15);
+    public int getSignal(BlockState blockState, BlockGetter blockAccess, BlockPos pos, Direction side) {
+        return Mth.clamp(ChestBlockEntity.getOpenCount(blockAccess, pos), 0, 15);
     }
 
-    public int getStrongPower(BlockState blockState, IBlockReader blockAccess, BlockPos pos, Direction side) {
-        return side == Direction.UP ? blockState.getWeakPower(blockAccess, pos, side) : 0;
+    public int getDirectSignal(BlockState blockState, BlockGetter blockAccess, BlockPos pos, Direction side) {
+        return side == Direction.UP ? blockState.getSignal(blockAccess, pos, side) : 0;
     }
 }

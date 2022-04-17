@@ -2,19 +2,19 @@ package com.github.alexthe666.iceandfire.pathfinding.raycoms;
 /*
     All of this code is used with permission from Raycoms, one of the developers of the minecolonies project.
  */
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.pathfinding.GroundPathNavigator;
-import net.minecraft.pathfinding.Path;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.Future;
 
-public abstract class AbstractAdvancedPathNavigate extends GroundPathNavigator {
+public abstract class AbstractAdvancedPathNavigate extends GroundPathNavigation {
     //  Parent class private members
-    protected final MobEntity ourEntity;
+    protected final Mob ourEntity;
     @Nullable
     protected BlockPos destination;
     protected double walkSpeedFactor = 1.0D;
@@ -29,10 +29,10 @@ public abstract class AbstractAdvancedPathNavigate extends GroundPathNavigator {
     private PathingOptions pathingOptions = new PathingOptions();
 
     public AbstractAdvancedPathNavigate(
-            final MobEntity entityLiving,
-            final World worldIn) {
+            final Mob entityLiving,
+            final Level worldIn) {
         super(entityLiving, worldIn);
-        this.ourEntity = entity;
+        this.ourEntity = mob;
     }
 
     /**
@@ -117,7 +117,7 @@ public abstract class AbstractAdvancedPathNavigate extends GroundPathNavigator {
      *
      * @return mobentity
      */
-    public MobEntity getOurEntity() {
+    public Mob getOurEntity() {
         return ourEntity;
     }
 

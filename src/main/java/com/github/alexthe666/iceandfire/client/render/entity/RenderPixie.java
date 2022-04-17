@@ -4,11 +4,11 @@ import com.github.alexthe666.iceandfire.client.model.ModelPixie;
 import com.github.alexthe666.iceandfire.client.render.entity.layer.LayerPixieGlow;
 import com.github.alexthe666.iceandfire.client.render.entity.layer.LayerPixieItem;
 import com.github.alexthe666.iceandfire.entity.EntityPixie;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.entity.EntityRendererManager;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -22,24 +22,24 @@ public class RenderPixie extends MobRenderer<EntityPixie, ModelPixie> {
     public static final ResourceLocation TEXTURE_4 = new ResourceLocation("iceandfire:textures/models/pixie/pixie_4.png");
     public static final ResourceLocation TEXTURE_5 = new ResourceLocation("iceandfire:textures/models/pixie/pixie_5.png");
 
-    public RenderPixie(EntityRendererManager renderManager) {
+    public RenderPixie(EntityRenderDispatcher renderManager) {
         super(renderManager, new ModelPixie(), 0.2F);
-        this.layerRenderers.add(new LayerPixieItem(this));
-        this.layerRenderers.add(new LayerPixieGlow(this));
+        this.layers.add(new LayerPixieItem(this));
+        this.layers.add(new LayerPixieGlow(this));
 
     }
 
     @Override
-    public void preRenderCallback(EntityPixie LivingEntityIn, MatrixStack stack, float partialTickTime) {
+    public void scale(EntityPixie LivingEntityIn, PoseStack stack, float partialTickTime) {
         stack.scale(0.55F, 0.55F, 0.55F);
-        if (LivingEntityIn.isQueuedToSit()) {
+        if (LivingEntityIn.isOrderedToSit()) {
             stack.translate(0F, 0.5F, 0F);
 
         }
     }
 
     @Override
-    public ResourceLocation getEntityTexture(EntityPixie pixie) {
+    public ResourceLocation getTextureLocation(EntityPixie pixie) {
         switch (pixie.getColor()) {
             default:
                 return TEXTURE_0;

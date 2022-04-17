@@ -4,11 +4,11 @@ import com.github.alexthe666.iceandfire.client.model.ModelHydraBody;
 import com.github.alexthe666.iceandfire.client.render.entity.layer.LayerGenericGlowing;
 import com.github.alexthe666.iceandfire.client.render.entity.layer.LayerHydraHead;
 import com.github.alexthe666.iceandfire.entity.EntityHydra;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.entity.EntityRendererManager;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 
 public class RenderHydra extends MobRenderer<EntityHydra, ModelHydraBody> {
 
@@ -17,19 +17,19 @@ public class RenderHydra extends MobRenderer<EntityHydra, ModelHydraBody> {
     public static final ResourceLocation TEXUTURE_2 = new ResourceLocation("iceandfire:textures/models/hydra/hydra_2.png");
     public static final ResourceLocation TEXUTURE_EYES = new ResourceLocation("iceandfire:textures/models/hydra/hydra_eyes.png");
 
-    public RenderHydra(EntityRendererManager renderManager) {
+    public RenderHydra(EntityRenderDispatcher renderManager) {
         super(renderManager, new ModelHydraBody(), 1.2F);
         this.addLayer(new LayerHydraHead(this));
         this.addLayer(new LayerGenericGlowing(this, TEXUTURE_EYES));
     }
 
     @Override
-    public void preRenderCallback(EntityHydra LivingEntityIn, MatrixStack stack, float partialTickTime) {
+    public void scale(EntityHydra LivingEntityIn, PoseStack stack, float partialTickTime) {
         stack.scale(1.75F, 1.75F, 1.75F);
     }
 
     @Override
-    public ResourceLocation getEntityTexture(EntityHydra gorgon) {
+    public ResourceLocation getTextureLocation(EntityHydra gorgon) {
         switch (gorgon.getVariant()) {
             default:
                 return TEXUTURE_0;

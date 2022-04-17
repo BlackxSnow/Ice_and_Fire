@@ -2,11 +2,11 @@ package com.github.alexthe666.iceandfire.client.render.entity;
 
 import com.github.alexthe666.iceandfire.client.model.ModelSiren;
 import com.github.alexthe666.iceandfire.entity.EntitySiren;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.entity.EntityRendererManager;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -20,18 +20,18 @@ public class RenderSiren extends MobRenderer<EntitySiren, ModelSiren> {
     public static final ResourceLocation TEXTURE_2 = new ResourceLocation("iceandfire:textures/models/siren/siren_2.png");
     public static final ResourceLocation TEXTURE_2_AGGRESSIVE = new ResourceLocation("iceandfire:textures/models/siren/siren_2_aggressive.png");
 
-    public RenderSiren(EntityRendererManager renderManager) {
+    public RenderSiren(EntityRenderDispatcher renderManager) {
         super(renderManager, new ModelSiren(), 0.8F);
     }
 
     @Override
-    public void preRenderCallback(EntitySiren LivingEntityIn, MatrixStack stack, float partialTickTime) {
+    public void scale(EntitySiren LivingEntityIn, PoseStack stack, float partialTickTime) {
         stack.translate(0, 0, -0.5F);
 
     }
 
     @Override
-    public ResourceLocation getEntityTexture(EntitySiren siren) {
+    public ResourceLocation getTextureLocation(EntitySiren siren) {
         switch (siren.getHairColor()) {
             default:
                 return siren.isAgressive() ? TEXTURE_0_AGGRESSIVE : TEXTURE_0;

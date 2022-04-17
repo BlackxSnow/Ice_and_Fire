@@ -1,6 +1,6 @@
 package com.github.alexthe666.iceandfire.entity.ai;
 
-import net.minecraft.entity.MobEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.apache.logging.log4j.LogManager;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * Class to easily list the current tasks/goals of entities and identify potential issues
  */
 public class AiDebug {
-    private static List<MobEntity> entities = new ArrayList<>();
+    private static List<Mob> entities = new ArrayList<>();
     private static Logger LOGGER = LogManager.getLogger();
 
     private AiDebug() {
@@ -28,8 +28,8 @@ public class AiDebug {
     }
 
     public static void logData(){
-        List<MobEntity> entitiesCopy = new ArrayList<>(entities);
-        for (MobEntity entity : entitiesCopy) {
+        List<Mob> entitiesCopy = new ArrayList<>(entities);
+        for (Mob entity : entitiesCopy) {
             if (!entity.isAlive()){
                 entities.remove(entity);
                 continue;
@@ -48,11 +48,11 @@ public class AiDebug {
         }
     }
 
-    public static boolean contains(MobEntity entity){
+    public static boolean contains(Mob entity){
         return entities.contains(entity);
     }
 
-    public static void addEntity(MobEntity entity){
+    public static void addEntity(Mob entity){
         if (entities.contains(entity)){
             entities.remove(entity);
         }

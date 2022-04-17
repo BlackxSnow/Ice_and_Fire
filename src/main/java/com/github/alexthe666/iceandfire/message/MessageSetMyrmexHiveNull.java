@@ -4,8 +4,8 @@ import java.util.function.Supplier;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.fml.network.NetworkEvent;
 
 public class MessageSetMyrmexHiveNull {
@@ -13,11 +13,11 @@ public class MessageSetMyrmexHiveNull {
     public MessageSetMyrmexHiveNull() {
     }
 
-    public static MessageSetMyrmexHiveNull read(PacketBuffer buf) {
+    public static MessageSetMyrmexHiveNull read(FriendlyByteBuf buf) {
         return new MessageSetMyrmexHiveNull();
     }
 
-    public static void write(MessageSetMyrmexHiveNull message, PacketBuffer buf) {
+    public static void write(MessageSetMyrmexHiveNull message, FriendlyByteBuf buf) {
     }
 
     public static class Handler {
@@ -26,7 +26,7 @@ public class MessageSetMyrmexHiveNull {
 
         public static void handle(MessageSetMyrmexHiveNull message, Supplier<NetworkEvent.Context> context) {
             context.get().setPacketHandled(true);
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             if (player != null) {
                 IceAndFire.PROXY.setReferencedHive(null);
             }

@@ -5,21 +5,22 @@ import java.util.List;
 
 import com.github.alexthe666.iceandfire.entity.EntityAmphithere;
 
-import net.minecraft.entity.ai.RandomPositionGenerator;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.pathfinding.Path;
-import net.minecraft.util.EntityPredicates;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.entity.ai.util.DefaultRandomPos;
+import net.minecraft.world.entity.ai.util.RandomPos;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class AmphithereAIFleePlayer extends Goal {
     private final double farSpeed;
     private final double nearSpeed;
     private final float avoidDistance;
     protected EntityAmphithere entity;
-    protected PlayerEntity closestLivingEntity;
+    protected Player closestLivingEntity;
     private Path path;
 
     public AmphithereAIFleePlayer(EntityAmphithere entityIn, float avoidDistanceIn, double farSpeedIn, double nearSpeedIn) {
@@ -27,25 +28,25 @@ public class AmphithereAIFleePlayer extends Goal {
         this.avoidDistance = avoidDistanceIn;
         this.farSpeed = farSpeedIn;
         this.nearSpeed = nearSpeedIn;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
 
-    public boolean shouldExecute() {
-        if (!this.entity.isFlying() && !this.entity.isTamed()) {
-            List<PlayerEntity> list = this.entity.world.getEntitiesWithinAABB(PlayerEntity.class, this.entity.getBoundingBox().grow(this.avoidDistance, 6D, this.avoidDistance), EntityPredicates.CAN_AI_TARGET);
+    public boolean canUse() {
+        if (!this.entity.isFlying() && !this.entity.isTame()) {
+            List<Player> list = this.entity.level.getEntitiesOfClass(Player.class, this.entity.getBoundingBox().inflate(this.avoidDistance, 6D, this.avoidDistance), EntitySelector.NO_CREATIVE_OR_SPECTATOR);
             if (list.isEmpty()) {
                 return false;
             } else {
                 this.closestLivingEntity = list.get(0);
-                Vector3d Vector3d = RandomPositionGenerator.findRandomTargetBlockAwayFrom(this.entity, 20, 7, new Vector3d(this.closestLivingEntity.getPosX(), this.closestLivingEntity.getPosY(), this.closestLivingEntity.getPosZ()));
+                Vec3 Vector3d = DefaultRandomPos.getPosAway(this.entity, 20, 7, new Vec3(this.closestLivingEntity.getX(), this.closestLivingEntity.getY(), this.closestLivingEntity.getZ()));
 
                 if (Vector3d == null) {
                     return false;
-                } else if (this.closestLivingEntity.getDistanceSq(Vector3d) < this.closestLivingEntity.getDistanceSq(this.entity)) {
+                } else if (this.closestLivingEntity.distanceToSqr(Vector3d) < this.closestLivingEntity.distanceToSqr(this.entity)) {
                     return false;
                 } else {
-                    this.path = this.entity.getNavigator().pathfind(Vector3d.x, Vector3d.y, Vector3d.z, 0);
+                    this.path = this.entity.getNavigation().createPath(Vector3d.x, Vector3d.y, Vector3d.z, 0);
                     return this.path != null;
                 }
             }
@@ -54,23 +55,23 @@ public class AmphithereAIFleePlayer extends Goal {
         }
     }
 
-    public boolean shouldContinueExecuting() {
-        return !this.entity.getNavigator().noPath();
+    public boolean canContinueToUse() {
+        return !this.entity.getNavigation().isDone();
     }
 
-    public void startExecuting() {
-        this.entity.getNavigator().setPath(this.path, this.farSpeed);
+    public void start() {
+        this.entity.getNavigation().moveTo(this.path, this.farSpeed);
     }
 
-    public void resetTask() {
+    public void stop() {
         this.closestLivingEntity = null;
     }
 
     public void tick() {
-        if (this.entity.getDistanceSq(this.closestLivingEntity) < 49.0D) {
-            this.entity.getNavigator().setSpeed(this.nearSpeed);
+        if (this.entity.distanceToSqr(this.closestLivingEntity) < 49.0D) {
+            this.entity.getNavigation().setSpeedModifier(this.nearSpeed);
         } else {
-            this.entity.getNavigator().setSpeed(this.farSpeed);
+            this.entity.getNavigation().setSpeedModifier(this.farSpeed);
         }
     }
 }

@@ -5,10 +5,10 @@ import java.util.function.Supplier;
 import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.EntityHydra;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -29,11 +29,11 @@ public class MessagePlayerHitMultipart {
     public MessagePlayerHitMultipart() {
     }
 
-    public static MessagePlayerHitMultipart read(PacketBuffer buf) {
+    public static MessagePlayerHitMultipart read(FriendlyByteBuf buf) {
         return new MessagePlayerHitMultipart(buf.readInt(), buf.readInt());
     }
 
-    public static void write(MessagePlayerHitMultipart message, PacketBuffer buf) {
+    public static void write(MessagePlayerHitMultipart message, FriendlyByteBuf buf) {
         buf.writeInt(message.creatureID);
         buf.writeInt(message.extraData);
     }
@@ -44,18 +44,18 @@ public class MessagePlayerHitMultipart {
 
         public static void handle(MessagePlayerHitMultipart message, Supplier<NetworkEvent.Context> context) {
             context.get().setPacketHandled(true);
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             if(context.get().getDirection().getReceptionSide() == LogicalSide.CLIENT){
                 player = IceAndFire.PROXY.getClientSidePlayer();
             }
             if (player != null) {
-                if (player.world != null) {
-                    Entity entity = player.world.getEntityByID(message.creatureID);
+                if (player.level != null) {
+                    Entity entity = player.level.getEntity(message.creatureID);
                     if (entity != null && entity instanceof LivingEntity) {
-                        double dist = player.getDistance(entity);
+                        double dist = player.distanceTo(entity);
                         LivingEntity mob = (LivingEntity) entity;
                         if (dist < 100) {
-                            player.attackTargetEntityWithCurrentItem(mob);
+                            player.attack(mob);
                             if (mob instanceof EntityHydra) {
                                 ((EntityHydra) mob).triggerHeadFlags(message.extraData);
                             }

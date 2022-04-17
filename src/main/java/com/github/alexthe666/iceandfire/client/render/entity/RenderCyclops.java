@@ -2,11 +2,11 @@ package com.github.alexthe666.iceandfire.client.render.entity;
 
 import com.github.alexthe666.iceandfire.client.model.ModelCyclops;
 import com.github.alexthe666.iceandfire.entity.EntityCyclops;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.entity.EntityRendererManager;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -26,18 +26,18 @@ public class RenderCyclops extends MobRenderer<EntityCyclops, ModelCyclops> {
     public static final ResourceLocation BLINK_3_TEXTURE = new ResourceLocation("iceandfire:textures/models/cyclops/cyclops_3_blink.png");
     public static final ResourceLocation BLINDED_3_TEXTURE = new ResourceLocation("iceandfire:textures/models/cyclops/cyclops_3_injured.png");
 
-    public RenderCyclops(EntityRendererManager renderManager) {
+    public RenderCyclops(EntityRenderDispatcher renderManager) {
         super(renderManager, new ModelCyclops(), 1.6F);
     }
 
     @Override
-    protected void preRenderCallback(EntityCyclops entity, MatrixStack matrixStackIn, float partialTickTime) {
+    protected void scale(EntityCyclops entity, PoseStack matrixStackIn, float partialTickTime) {
         matrixStackIn.scale(2.25F, 2.25F, 2.25F);
 
     }
 
     @Override
-    public ResourceLocation getEntityTexture(EntityCyclops cyclops) {
+    public ResourceLocation getTextureLocation(EntityCyclops cyclops) {
         switch (cyclops.getVariant()) {
             case 0:
                 if (cyclops.isBlinded()) {

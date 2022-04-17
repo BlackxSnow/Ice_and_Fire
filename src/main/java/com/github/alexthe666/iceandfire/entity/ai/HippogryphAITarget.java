@@ -7,10 +7,10 @@ import javax.annotation.Nullable;
 import com.github.alexthe666.iceandfire.entity.EntityHippogryph;
 import com.github.alexthe666.iceandfire.entity.util.DragonUtils;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
-import net.minecraft.entity.passive.AnimalEntity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.player.Player;
 
 public class HippogryphAITarget<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
     private EntityHippogryph hippogryph;
@@ -27,18 +27,18 @@ public class HippogryphAITarget<T extends LivingEntity> extends NearestAttackabl
 
 
     @Override
-    public boolean shouldExecute() {
-        if (this.goalOwner.getRNG().nextInt(20) != 0) {
+    public boolean canUse() {
+        if (this.mob.getRandom().nextInt(20) != 0) {
             return false;
         }
-        if (super.shouldExecute() && nearestTarget != null && !nearestTarget.getClass().equals(this.hippogryph.getClass())) {
-            if (this.hippogryph.getWidth() >= nearestTarget.getWidth()) {
-                if (nearestTarget instanceof PlayerEntity) {
-                    return !hippogryph.isTamed();
+        if (super.canUse() && target != null && !target.getClass().equals(this.hippogryph.getClass())) {
+            if (this.hippogryph.getBbWidth() >= target.getBbWidth()) {
+                if (target instanceof Player) {
+                    return !hippogryph.isTame();
                 } else {
-                    if (!hippogryph.isOwner(nearestTarget) && hippogryph.canMove() && nearestTarget instanceof AnimalEntity) {
-                        if (hippogryph.isTamed()) {
-                            return DragonUtils.canTameDragonAttack(hippogryph, nearestTarget);
+                    if (!hippogryph.isOwnedBy(target) && hippogryph.canMove() && target instanceof Animal) {
+                        if (hippogryph.isTame()) {
+                            return DragonUtils.canTameDragonAttack(hippogryph, target);
                         } else {
                             return true;
                         }

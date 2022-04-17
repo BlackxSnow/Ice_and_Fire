@@ -11,88 +11,88 @@ import com.github.alexthe666.iceandfire.entity.EntityFireDragon;
 import com.github.alexthe666.iceandfire.entity.EntityIceDragon;
 
 import com.github.alexthe666.iceandfire.entity.props.FrozenProperties;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.LightningBoltEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.IItemTier;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.SwordItem;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Tier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.Level;
 
 public class ItemAlchemySword extends SwordItem {
 
-    public ItemAlchemySword(IItemTier toolmaterial, String name) {
-        super(toolmaterial, 3, -2.4F, new Item.Properties().group(IceAndFire.TAB_ITEMS));
+    public ItemAlchemySword(Tier toolmaterial, String name) {
+        super(toolmaterial, 3, -2.4F, new Item.Properties().tab(IceAndFire.TAB_ITEMS));
         this.setRegistryName(IceAndFire.MODID, name);
     }
 
     @Override
-    public boolean hitEntity(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+    public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         if (this == IafItemRegistry.DRAGONBONE_SWORD_FIRE && IafConfig.dragonWeaponFireAbility) {
             if (target instanceof EntityIceDragon) {
-                target.attackEntityFrom(DamageSource.IN_FIRE, 13.5F);
+                target.hurt(DamageSource.IN_FIRE, 13.5F);
             }
-            target.setFire(5);
-            target.applyKnockback( 1F, attacker.getPosX() - target.getPosX(), attacker.getPosZ() - target.getPosZ());
+            target.setSecondsOnFire(5);
+            target.knockback( 1F, attacker.getX() - target.getX(), attacker.getZ() - target.getZ());
         }
         if (this == IafItemRegistry.DRAGONBONE_SWORD_ICE && IafConfig.dragonWeaponIceAbility) {
             if (target instanceof EntityFireDragon) {
-                target.attackEntityFrom(DamageSource.DROWN, 13.5F);
+                target.hurt(DamageSource.DROWN, 13.5F);
             }
             FrozenProperties.setFrozenFor(target, 200);
-            target.addPotionEffect(new EffectInstance(Effects.SLOWNESS, 100, 2));
-            target.addPotionEffect(new EffectInstance(Effects.MINING_FATIGUE, 100, 2));
-            target.applyKnockback(1F, attacker.getPosX() - target.getPosX(), attacker.getPosZ() - target.getPosZ());
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 2));
+            target.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 100, 2));
+            target.knockback(1F, attacker.getX() - target.getX(), attacker.getZ() - target.getZ());
         }
         if (this == IafItemRegistry.DRAGONBONE_SWORD_LIGHTNING && IafConfig.dragonWeaponLightningAbility) {
             boolean flag = true;
-            if(attacker instanceof PlayerEntity){
-                if(((PlayerEntity)attacker).swingProgress > 0.2){
+            if(attacker instanceof Player){
+                if(((Player)attacker).attackAnim > 0.2){
                     flag = false;
                 }
             }
-            if(!attacker.world.isRemote && flag){
-                LightningBoltEntity lightningboltentity = EntityType.LIGHTNING_BOLT.create(target.world);
-                lightningboltentity.moveForced(target.getPositionVec());
-                if(!target.world.isRemote){
-                    target.world.addEntity(lightningboltentity);
+            if(!attacker.level.isClientSide && flag){
+                LightningBolt lightningboltentity = EntityType.LIGHTNING_BOLT.create(target.level);
+                lightningboltentity.moveTo(target.position());
+                if(!target.level.isClientSide){
+                    target.level.addFreshEntity(lightningboltentity);
                 }
             }
             if (target instanceof EntityFireDragon || target instanceof EntityIceDragon) {
-                target.attackEntityFrom(DamageSource.LIGHTNING_BOLT, 9.5F);
+                target.hurt(DamageSource.LIGHTNING_BOLT, 9.5F);
             }
-            target.applyKnockback(1F, attacker.getPosX() - target.getPosX(), attacker.getPosZ() - target.getPosZ());
+            target.knockback(1F, attacker.getX() - target.getX(), attacker.getZ() - target.getZ());
         }
-        return super.hitEntity(stack, target, attacker);
+        return super.hurtEnemy(stack, target, attacker);
     }
 
     @Override
-    public void addInformation(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
-        tooltip.add(new TranslationTextComponent("item.iceandfire.legendary_weapon.desc").mergeStyle(TextFormatting.GRAY));
+    public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> tooltip, TooltipFlag flagIn) {
+        tooltip.add(new TranslatableComponent("item.iceandfire.legendary_weapon.desc").withStyle(ChatFormatting.GRAY));
         if (this == IafItemRegistry.DRAGONBONE_SWORD_FIRE) {
-            tooltip.add(new TranslationTextComponent("dragon_sword_fire.hurt1").mergeStyle(TextFormatting.GREEN));
-            tooltip.add(new TranslationTextComponent("dragon_sword_fire.hurt2").mergeStyle(TextFormatting.DARK_RED));
+            tooltip.add(new TranslatableComponent("dragon_sword_fire.hurt1").withStyle(ChatFormatting.GREEN));
+            tooltip.add(new TranslatableComponent("dragon_sword_fire.hurt2").withStyle(ChatFormatting.DARK_RED));
         }
         if (this == IafItemRegistry.DRAGONBONE_SWORD_ICE) {
-            tooltip.add(new TranslationTextComponent("dragon_sword_ice.hurt1").mergeStyle(TextFormatting.GREEN));
-            tooltip.add(new TranslationTextComponent("dragon_sword_ice.hurt2").mergeStyle(TextFormatting.AQUA));
+            tooltip.add(new TranslatableComponent("dragon_sword_ice.hurt1").withStyle(ChatFormatting.GREEN));
+            tooltip.add(new TranslatableComponent("dragon_sword_ice.hurt2").withStyle(ChatFormatting.AQUA));
         }
         if (this == IafItemRegistry.DRAGONBONE_SWORD_LIGHTNING) {
-            tooltip.add(new TranslationTextComponent("dragon_sword_lightning.hurt1").mergeStyle(TextFormatting.GREEN));
-            tooltip.add(new TranslationTextComponent("dragon_sword_lightning.hurt2").mergeStyle(TextFormatting.DARK_PURPLE));
+            tooltip.add(new TranslatableComponent("dragon_sword_lightning.hurt1").withStyle(ChatFormatting.GREEN));
+            tooltip.add(new TranslatableComponent("dragon_sword_lightning.hurt2").withStyle(ChatFormatting.DARK_PURPLE));
         }
     }
 
-    public boolean hasEffect(ItemStack stack) {
+    public boolean isFoil(ItemStack stack) {
         return true;
     }
 }

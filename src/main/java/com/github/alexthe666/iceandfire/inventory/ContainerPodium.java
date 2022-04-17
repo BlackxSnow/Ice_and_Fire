@@ -1,27 +1,27 @@
 package com.github.alexthe666.iceandfire.inventory;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.inventory.container.Container;
-import net.minecraft.inventory.container.Slot;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.IIntArray;
-import net.minecraft.util.IntArray;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.SimpleContainerData;
 
-public class ContainerPodium extends Container {
-    public final IInventory podium;
+public class ContainerPodium extends AbstractContainerMenu {
+    public final Container podium;
 
-    public ContainerPodium(int i, PlayerInventory playerInventory) {
-        this(i, new Inventory(1), playerInventory, new IntArray(0));
+    public ContainerPodium(int i, Inventory playerInventory) {
+        this(i, new SimpleContainer(1), playerInventory, new SimpleContainerData(0));
     }
 
 
-    public ContainerPodium(int id, IInventory furnaceInventory, PlayerInventory playerInventory, IIntArray vars) {
+    public ContainerPodium(int id, Container furnaceInventory, Inventory playerInventory, ContainerData vars) {
         super(IafContainerRegistry.PODIUM_CONTAINER, id);
         this.podium = furnaceInventory;
-        furnaceInventory.openInventory(playerInventory.player);
+        furnaceInventory.startOpen(playerInventory.player);
         byte b0 = 51;
         int i;
 
@@ -39,34 +39,34 @@ public class ContainerPodium extends Container {
     }
 
     @Override
-    public boolean canInteractWith(PlayerEntity playerIn) {
-        return this.podium.isUsableByPlayer(playerIn);
+    public boolean stillValid(Player playerIn) {
+        return this.podium.stillValid(playerIn);
     }
 
     /**
      * Take a stack from the specified inventory slot.
      */
     @Override
-    public ItemStack transferStackInSlot(PlayerEntity playerIn, int index) {
+    public ItemStack quickMoveStack(Player playerIn, int index) {
         ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.inventorySlots.get(index);
+        Slot slot = this.slots.get(index);
 
-        if (slot != null && slot.getHasStack()) {
-            ItemStack itemstack1 = slot.getStack();
+        if (slot != null && slot.hasItem()) {
+            ItemStack itemstack1 = slot.getItem();
             itemstack = itemstack1.copy();
 
-            if (index < this.podium.getSizeInventory()) {
-                if (!this.mergeItemStack(itemstack1, this.podium.getSizeInventory(), this.inventorySlots.size(), true)) {
+            if (index < this.podium.getContainerSize()) {
+                if (!this.moveItemStackTo(itemstack1, this.podium.getContainerSize(), this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.mergeItemStack(itemstack1, 0, this.podium.getSizeInventory(), false)) {
+            } else if (!this.moveItemStackTo(itemstack1, 0, this.podium.getContainerSize(), false)) {
                 return ItemStack.EMPTY;
             }
 
             if (itemstack1.isEmpty()) {
-                slot.putStack(ItemStack.EMPTY);
+                slot.set(ItemStack.EMPTY);
             } else {
-                slot.onSlotChanged();
+                slot.setChanged();
             }
         }
 
@@ -77,8 +77,8 @@ public class ContainerPodium extends Container {
      * Called when the container is closed.
      */
     @Override
-    public void onContainerClosed(PlayerEntity playerIn) {
-        super.onContainerClosed(playerIn);
-        this.podium.closeInventory(playerIn);
+    public void removed(Player playerIn) {
+        super.removed(playerIn);
+        this.podium.stopOpen(playerIn);
     }
 }

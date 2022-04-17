@@ -2,22 +2,22 @@ package com.github.alexthe666.iceandfire.entity;
 
 import com.github.alexthe666.iceandfire.entity.props.ChainProperties;
 import com.github.alexthe666.iceandfire.item.IafItemRegistry;
-import net.minecraft.block.WallBlock;
+import net.minecraft.world.level.block.WallBlock;
 import net.minecraft.entity.*;
-import net.minecraft.entity.item.HangingEntity;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.IPacket;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.Hand;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.decoration.HangingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.network.NetworkHooks;
@@ -25,91 +25,97 @@ import net.minecraftforge.fml.network.NetworkHooks;
 import javax.annotation.Nullable;
 import java.util.List;
 
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
+
 public class EntityChainTie extends HangingEntity {
 
-    public EntityChainTie(EntityType type, World worldIn) {
+    public EntityChainTie(EntityType type, Level worldIn) {
         super(type, worldIn);
     }
 
-    public EntityChainTie(EntityType type, World worldIn, BlockPos hangingPositionIn) {
+    public EntityChainTie(EntityType type, Level worldIn, BlockPos hangingPositionIn) {
         super(type, worldIn, hangingPositionIn);
-        this.setPosition((double) hangingPositionIn.getX() + 0.5D, hangingPositionIn.getY(), (double) hangingPositionIn.getZ() + 0.5D);
-        this.forceSpawn = true;
+        this.setPos((double) hangingPositionIn.getX() + 0.5D, hangingPositionIn.getY(), (double) hangingPositionIn.getZ() + 0.5D);
+        this.forcedLoading = true;
     }
 
-    public static EntityChainTie createTie(World worldIn, BlockPos fence) {
+    public static EntityChainTie createTie(Level worldIn, BlockPos fence) {
         EntityChainTie entityChainTie = new EntityChainTie(IafEntityRegistry.CHAIN_TIE, worldIn, fence);
-        worldIn.addEntity(entityChainTie);
-        entityChainTie.playPlaceSound();
+        worldIn.addFreshEntity(entityChainTie);
+        entityChainTie.playPlacementSound();
         return entityChainTie;
     }
 
     @Nullable
-    public static EntityChainTie getKnotForPosition(World worldIn, BlockPos pos) {
+    public static EntityChainTie getKnotForPosition(Level worldIn, BlockPos pos) {
         int i = pos.getX();
         int j = pos.getY();
         int k = pos.getZ();
 
-        for (EntityChainTie entityleashknot : worldIn.getEntitiesWithinAABB(EntityChainTie.class, new AxisAlignedBB((double) i - 1.0D, (double) j - 1.0D, (double) k - 1.0D, (double) i + 1.0D, (double) j + 1.0D, (double) k + 1.0D))) {
-            if (entityleashknot != null && entityleashknot.getHangingPosition() != null && entityleashknot.getHangingPosition().equals(pos)) {
+        for (EntityChainTie entityleashknot : worldIn.getEntitiesOfClass(EntityChainTie.class, new AABB((double) i - 1.0D, (double) j - 1.0D, (double) k - 1.0D, (double) i + 1.0D, (double) j + 1.0D, (double) k + 1.0D))) {
+            if (entityleashknot != null && entityleashknot.getPos() != null && entityleashknot.getPos().equals(pos)) {
                 return entityleashknot;
             }
         }
         return null;
     }
 
-    public void setPosition(double x, double y, double z) {
-        super.setPosition((double) MathHelper.floor(x) + 0.5D, (double) MathHelper.floor(y) + 0.5D, (double) MathHelper.floor(z) + 0.5D);
+    public void setPos(double x, double y, double z) {
+        super.setPos((double) Mth.floor(x) + 0.5D, (double) Mth.floor(y) + 0.5D, (double) Mth.floor(z) + 0.5D);
     }
 
-    protected void updateBoundingBox() {
-        this.setRawPosition((double) this.hangingPosition.getX() + 0.5D, (double) this.hangingPosition.getY() + 0.5D, (double) this.hangingPosition.getZ() + 0.5D);
+    protected void recalculateBoundingBox() {
+        this.setPosRaw((double) this.pos.getX() + 0.5D, (double) this.pos.getY() + 0.5D, (double) this.pos.getZ() + 0.5D);
         double xSize = 0.3D;
         double ySize = 0.875D;
         double zSize = xSize;
-        this.setBoundingBox(new AxisAlignedBB(this.getPosX() - xSize, this.getPosY() - 0.5, this.getPosZ() - zSize,
-            this.getPosX() + xSize, this.getPosY() + ySize - 0.5, this.getPosZ() + zSize));
-        if (this.isAddedToWorld() && this.world instanceof net.minecraft.world.server.ServerWorld)
-            ((net.minecraft.world.server.ServerWorld) this.world).chunkCheck(this); // Forge - Process chunk registration after moving.
+        this.setBoundingBox(new AABB(this.getX() - xSize, this.getY() - 0.5, this.getZ() - zSize,
+            this.getX() + xSize, this.getY() + ySize - 0.5, this.getZ() + zSize));
+        if (this.isAddedToWorld() && this.level instanceof net.minecraft.server.level.ServerLevel)
+            ((net.minecraft.server.level.ServerLevel) this.level).updateChunkPos(this); // Forge - Process chunk registration after moving.
     }
 
-    public boolean attackEntityFrom(DamageSource source, float amount) {
-        if (source.getTrueSource() != null && source.getTrueSource() instanceof PlayerEntity) {
-            return super.attackEntityFrom(source, amount);
+    public boolean hurt(DamageSource source, float amount) {
+        if (source.getEntity() != null && source.getEntity() instanceof Player) {
+            return super.hurt(source, amount);
         }
         return false;
     }
 
-    public int getWidthPixels() {
+    public int getWidth() {
         return 9;
     }
 
-    public int getHeightPixels() {
+    public int getHeight() {
         return 9;
     }
 
-    public void writeAdditional(CompoundNBT compound) {
-        BlockPos blockpos = this.getHangingPosition();
+    public void addAdditionalSaveData(CompoundTag compound) {
+        BlockPos blockpos = this.getPos();
         compound.putInt("TileX", blockpos.getX());
         compound.putInt("TileY", blockpos.getY());
         compound.putInt("TileZ", blockpos.getZ());
     }
 
-    public void readAdditional(CompoundNBT compound) {
-        this.hangingPosition = new BlockPos(compound.getInt("TileX"), compound.getInt("TileY"), compound.getInt("TileZ"));
+    public void readAdditionalSaveData(CompoundTag compound) {
+        this.pos = new BlockPos(compound.getInt("TileX"), compound.getInt("TileY"), compound.getInt("TileZ"));
     }
 
-    protected float getEyeHeight(Pose poseIn, EntitySize sizeIn) {
+    protected float getEyeHeight(Pose poseIn, EntityDimensions sizeIn) {
         return -0.0625F;
     }
 
     @OnlyIn(Dist.CLIENT)
-    public boolean isInRangeToRenderDist(double distance) {
+    public boolean shouldRenderAtSqrDistance(double distance) {
         return distance < 1024.0D;
     }
 
-    public void onBroken(@Nullable Entity brokenEntity) {
-        this.playSound(SoundEvents.ITEM_ARMOR_EQUIP_CHAIN, 1.0F, 1.0F);
+    public void dropItem(@Nullable Entity brokenEntity) {
+        this.playSound(SoundEvents.ARMOR_EQUIP_CHAIN, 1.0F, 1.0F);
     }
 
     @Override
@@ -121,25 +127,25 @@ public class EntityChainTie extends HangingEntity {
     public void remove(boolean keepData) {
         super.remove(keepData);
         double d0 = 30D;
-        List<LivingEntity> list = this.world.getEntitiesWithinAABB(LivingEntity.class, new AxisAlignedBB(this.getPosX() - d0, this.getPosY() - d0, this.getPosZ() - d0, this.getPosX() + d0, this.getPosY() + d0, this.getPosZ() + d0));
+        List<LivingEntity> list = this.level.getEntitiesOfClass(LivingEntity.class, new AABB(this.getX() - d0, this.getY() - d0, this.getZ() - d0, this.getX() + d0, this.getY() + d0, this.getZ() + d0));
         for (LivingEntity livingEntity : list) {
             if (ChainProperties.isChainedTo(livingEntity, this)) {
                 ChainProperties.removeChain(livingEntity, this);
-                ItemEntity entityitem = new ItemEntity(this.world, this.getPosX(), this.getPosY() + (double) 1, this.getPosZ(), new ItemStack(IafItemRegistry.CHAIN));
-                entityitem.setDefaultPickupDelay();
-                this.world.addEntity(entityitem);
+                ItemEntity entityitem = new ItemEntity(this.level, this.getX(), this.getY() + (double) 1, this.getZ(), new ItemStack(IafItemRegistry.CHAIN));
+                entityitem.setDefaultPickUpDelay();
+                this.level.addFreshEntity(entityitem);
             }
         }
     }
 
     @Override
-    public ActionResultType processInitialInteract(PlayerEntity player, Hand hand) {
-        if (this.world.isRemote) {
-            return ActionResultType.SUCCESS;
+    public InteractionResult interact(Player player, InteractionHand hand) {
+        if (this.level.isClientSide) {
+            return InteractionResult.SUCCESS;
         } else {
             boolean flag = false;
             double d0 = 30D;
-            List<LivingEntity> list = this.world.getEntitiesWithinAABB(LivingEntity.class, new AxisAlignedBB(this.getPosX() - d0, this.getPosY() - d0, this.getPosZ() - d0, this.getPosX() + d0, this.getPosY() + d0, this.getPosZ() + d0));
+            List<LivingEntity> list = this.level.getEntitiesOfClass(LivingEntity.class, new AABB(this.getX() - d0, this.getY() - d0, this.getZ() - d0, this.getX() + d0, this.getY() + d0, this.getZ() + d0));
 
             for (LivingEntity livingEntity : list) {
                 if (ChainProperties.isChainedTo(livingEntity, player)) {
@@ -151,24 +157,24 @@ public class EntityChainTie extends HangingEntity {
 
             if (!flag) {
                 this.remove();
-                return ActionResultType.SUCCESS;
+                return InteractionResult.SUCCESS;
             }
 
-            return ActionResultType.CONSUME;
+            return InteractionResult.CONSUME;
         }
     }
 
 
     @Override
-    public IPacket<?> createSpawnPacket() {
+    public Packet<?> getAddEntityPacket() {
         return NetworkHooks.getEntitySpawningPacket(this);
     }
 
-    public boolean onValidSurface() {
-        return this.world.getBlockState(this.hangingPosition).getBlock() instanceof WallBlock;
+    public boolean survives() {
+        return this.level.getBlockState(this.pos).getBlock() instanceof WallBlock;
     }
 
-    public void playPlaceSound() {
-        this.playSound(SoundEvents.ITEM_ARMOR_EQUIP_CHAIN, 1.0F, 1.0F);
+    public void playPlacementSound() {
+        this.playSound(SoundEvents.ARMOR_EQUIP_CHAIN, 1.0F, 1.0F);
     }
 }

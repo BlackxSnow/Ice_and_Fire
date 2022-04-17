@@ -7,67 +7,67 @@ import javax.annotation.Nullable;
 
 import com.github.alexthe666.iceandfire.entity.util.IDreadMob;
 
-import net.minecraft.entity.CreatureAttribute;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ILivingEntityData;
+import net.minecraft.world.entity.MobType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.passive.horse.SkeletonHorseEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.server.management.PreYggdrasilConverter;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.animal.horse.SkeletonHorse;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.players.OldUsersConverter;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.IServerWorld;
-import net.minecraft.world.World;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.Level;
 
-public class EntityDreadHorse extends SkeletonHorseEntity implements IDreadMob {
+public class EntityDreadHorse extends SkeletonHorse implements IDreadMob {
 
-    protected static final DataParameter<Optional<UUID>> COMMANDER_UNIQUE_ID = EntityDataManager.createKey(EntityDreadHorse.class, DataSerializers.OPTIONAL_UNIQUE_ID);
+    protected static final EntityDataAccessor<Optional<UUID>> COMMANDER_UNIQUE_ID = SynchedEntityData.defineId(EntityDreadHorse.class, EntityDataSerializers.OPTIONAL_UUID);
 
-    public EntityDreadHorse(EntityType type, World worldIn) {
+    public EntityDreadHorse(EntityType type, Level worldIn) {
         super(type, worldIn);
     }
 
 
-    public static AttributeModifierMap.MutableAttribute bakeAttributes() {
-        return func_234237_fg_()
+    public static AttributeSupplier.Builder bakeAttributes() {
+        return createBaseHorseAttributes()
                 //HEALTH
-                .createMutableAttribute(Attributes.MAX_HEALTH, 25.0D)
+                .add(Attributes.MAX_HEALTH, 25.0D)
                 //SPEED
-                .createMutableAttribute(Attributes.MOVEMENT_SPEED, 0.3D)
+                .add(Attributes.MOVEMENT_SPEED, 0.3D)
                 //ARMOR
-                .createMutableAttribute(Attributes.ARMOR, 4.0D);
+                .add(Attributes.ARMOR, 4.0D);
     }
 
 
     @Override
-    protected void registerData() {
-        super.registerData();
-        this.dataManager.register(COMMANDER_UNIQUE_ID, Optional.empty());
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(COMMANDER_UNIQUE_ID, Optional.empty());
     }
 
     @Override
-    public void writeAdditional(CompoundNBT compound) {
-        super.writeAdditional(compound);
+    public void addAdditionalSaveData(CompoundTag compound) {
+        super.addAdditionalSaveData(compound);
         if (this.getCommanderId() != null) {
-            compound.putUniqueId("CommanderUUID", this.getCommanderId());
+            compound.putUUID("CommanderUUID", this.getCommanderId());
         }
     }
 
     @Override
-    public void readAdditional(CompoundNBT compound) {
-        super.readAdditional(compound);
+    public void readAdditionalSaveData(CompoundTag compound) {
+        super.readAdditionalSaveData(compound);
         UUID uuid;
-        if (compound.hasUniqueId("CommanderUUID")) {
-            uuid = compound.getUniqueId("CommanderUUID");
+        if (compound.hasUUID("CommanderUUID")) {
+            uuid = compound.getUUID("CommanderUUID");
         } else {
             String s = compound.getString("CommanderUUID");
-            uuid = PreYggdrasilConverter.convertMobOwnerIfNeeded(this.getServer(), s);
+            uuid = OldUsersConverter.convertMobOwnerIfNecessary(this.getServer(), s);
         }
 
         if (uuid != null) {
@@ -80,37 +80,37 @@ public class EntityDreadHorse extends SkeletonHorseEntity implements IDreadMob {
     }
 
     @Nullable
-    public ILivingEntityData onInitialSpawn(IServerWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason, @Nullable ILivingEntityData spawnDataIn, @Nullable CompoundNBT dataTag) {
-        ILivingEntityData data = super.onInitialSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
-        this.setGrowingAge(24000);
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor worldIn, DifficultyInstance difficultyIn, MobSpawnType reason, @Nullable SpawnGroupData spawnDataIn, @Nullable CompoundTag dataTag) {
+        SpawnGroupData data = super.finalizeSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
+        this.setAge(24000);
         return data;
     }
 
     @Override
-    public boolean isOnSameTeam(Entity entityIn) {
-        return entityIn instanceof IDreadMob || super.isOnSameTeam(entityIn);
+    public boolean isAlliedTo(Entity entityIn) {
+        return entityIn instanceof IDreadMob || super.isAlliedTo(entityIn);
     }
 
     @Nullable
     public UUID getCommanderId() {
-        return this.dataManager.get(COMMANDER_UNIQUE_ID).orElse(null);
+        return this.entityData.get(COMMANDER_UNIQUE_ID).orElse(null);
     }
 
     public void setCommanderId(@Nullable UUID uuid) {
-        this.dataManager.set(COMMANDER_UNIQUE_ID, Optional.ofNullable(uuid));
+        this.entityData.set(COMMANDER_UNIQUE_ID, Optional.ofNullable(uuid));
     }
 
     @Override
     public Entity getCommander() {
         try {
             UUID uuid = this.getCommanderId();
-            return uuid == null ? null : this.world.getPlayerByUuid(uuid);
+            return uuid == null ? null : this.level.getPlayerByUUID(uuid);
         } catch (IllegalArgumentException var2) {
             return null;
         }
     }
 
-    public CreatureAttribute getCreatureAttribute() {
-        return CreatureAttribute.UNDEAD;
+    public MobType getMobType() {
+        return MobType.UNDEAD;
     }
 }

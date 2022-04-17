@@ -1,13 +1,13 @@
 package com.github.alexthe666.iceandfire.entity.ai;
 
 import com.github.alexthe666.iceandfire.entity.EntityDragonBase;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.pathfinding.Path;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class DragonAIReturnToRoost  extends Goal {
     private final EntityDragonBase dragon;
@@ -17,33 +17,33 @@ public class DragonAIReturnToRoost  extends Goal {
     public DragonAIReturnToRoost(EntityDragonBase entityIn, double movementSpeedIn) {
         this.dragon = entityIn;
         this.movementSpeed = movementSpeedIn;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
-    public boolean shouldExecute() {
-        return this.dragon.canMove() && this.dragon.lookingForRoostAIFlag && (dragon.getAttackTarget() == null || !dragon.getAttackTarget().isAlive()) && dragon.getHomePosition() != null && dragon.getDistanceSquared(Vector3d.copyCentered(dragon.getHomePosition())) > dragon.getWidth() * dragon.getWidth();
+    public boolean canUse() {
+        return this.dragon.canMove() && this.dragon.lookingForRoostAIFlag && (dragon.getTarget() == null || !dragon.getTarget().isAlive()) && dragon.getRestrictCenter() != null && dragon.getDistanceSquared(Vec3.atCenterOf(dragon.getRestrictCenter())) > dragon.getBbWidth() * dragon.getBbWidth();
     }
 
     public void tick() {
-        if (this.dragon.getHomePosition() != null) {
-            double dist = Math.sqrt(dragon.getDistanceSquared(Vector3d.copyCentered(dragon.getHomePosition())));
-            double xDist = Math.abs(dragon.getPosX() - dragon.getHomePosition().getX() - 0.5F);
-            double zDist = Math.abs(dragon.getPosZ() - dragon.getHomePosition().getZ() - 0.5F);
+        if (this.dragon.getRestrictCenter() != null) {
+            double dist = Math.sqrt(dragon.getDistanceSquared(Vec3.atCenterOf(dragon.getRestrictCenter())));
+            double xDist = Math.abs(dragon.getX() - dragon.getRestrictCenter().getX() - 0.5F);
+            double zDist = Math.abs(dragon.getZ() - dragon.getRestrictCenter().getZ() - 0.5F);
             double xzDist = Math.sqrt(xDist * xDist + zDist * zDist);
 
-            if (dist < this.dragon.getWidth()) {
+            if (dist < this.dragon.getBbWidth()) {
                 this.dragon.setFlying(false);
                 this.dragon.setHovering(false);
-                this.dragon.getNavigator().tryMoveToXYZ(this.dragon.getHomePosition().getX(), this.dragon.getHomePosition().getY(), this.dragon.getHomePosition().getZ(), 1.0F);
+                this.dragon.getNavigation().moveTo(this.dragon.getRestrictCenter().getX(), this.dragon.getRestrictCenter().getY(), this.dragon.getRestrictCenter().getZ(), 1.0F);
             }else{
-                double yAddition = 15 + dragon.getRNG().nextInt(3);
+                double yAddition = 15 + dragon.getRandom().nextInt(3);
                 if(xzDist < 40){
                     yAddition = 0;
                     if(this.dragon.isOnGround()){
                         this.dragon.setFlying(false);
                         this.dragon.setHovering(false);
-                        this.dragon.flightManager.setFlightTarget(Vector3d.copyCenteredWithVerticalOffset(this.dragon.getHomePosition(), yAddition));
-                        this.dragon.getNavigator().tryMoveToXYZ(this.dragon.getHomePosition().getX(), this.dragon.getHomePosition().getY(), this.dragon.getHomePosition().getZ(), 1.0F);
+                        this.dragon.flightManager.setFlightTarget(Vec3.upFromBottomCenterOf(this.dragon.getRestrictCenter(), yAddition));
+                        this.dragon.getNavigation().moveTo(this.dragon.getRestrictCenter().getX(), this.dragon.getRestrictCenter().getY(), this.dragon.getRestrictCenter().getZ(), 1.0F);
                         return;
                     }
                 }
@@ -51,8 +51,8 @@ public class DragonAIReturnToRoost  extends Goal {
                     this.dragon.setHovering(true);
                 }
                 if(this.dragon.isFlying()){
-                    this.dragon.flightManager.setFlightTarget(Vector3d.copyCenteredWithVerticalOffset(this.dragon.getHomePosition(), yAddition));
-                    this.dragon.getNavigator().tryMoveToXYZ(this.dragon.getHomePosition().getX(), yAddition + this.dragon.getHomePosition().getY(), this.dragon.getHomePosition().getZ(), 1F);
+                    this.dragon.flightManager.setFlightTarget(Vec3.upFromBottomCenterOf(this.dragon.getRestrictCenter(), yAddition));
+                    this.dragon.getNavigation().moveTo(this.dragon.getRestrictCenter().getX(), yAddition + this.dragon.getRestrictCenter().getY(), this.dragon.getRestrictCenter().getZ(), 1F);
                 }
                 this.dragon.flyTicks = 0;
             }
@@ -61,8 +61,8 @@ public class DragonAIReturnToRoost  extends Goal {
 
     }
 
-    public boolean shouldContinueExecuting() {
-        return shouldExecute();
+    public boolean canContinueToUse() {
+        return canUse();
     }
 
 }

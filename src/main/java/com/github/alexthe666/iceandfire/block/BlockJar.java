@@ -7,32 +7,32 @@ import com.github.alexthe666.iceandfire.item.ICustomRendered;
 import com.github.alexthe666.iceandfire.item.IafItemRegistry;
 import com.github.alexthe666.iceandfire.misc.IafSoundRegistry;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ContainerBlock;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.Hand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.BlockRayTraceResult;
-import net.minecraft.util.math.shapes.ISelectionContext;
-import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.World;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 
-import net.minecraft.block.AbstractBlock.Properties;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
-public class BlockJar extends ContainerBlock implements ICustomRendered {
-    protected static final VoxelShape AABB = Block.makeCuboidShape(3, 0, 3, 13, 16, 13);
+public class BlockJar extends BaseEntityBlock implements ICustomRendered {
+    protected static final VoxelShape AABB = Block.box(3, 0, 3, 13, 16, 13);
     public Item itemBlock;
     private boolean empty;
     private int pixieType;
@@ -41,18 +41,18 @@ public class BlockJar extends ContainerBlock implements ICustomRendered {
         super(
     		pixieType != -1 ? 
 				Properties
-					.create(Material.GLASS)
-					.notSolid()
-					.variableOpacity()
-					.hardnessAndResistance(1, 2)
+					.of(Material.GLASS)
+					.noOcclusion()
+					.dynamicShape()
+					.strength(1, 2)
 					.sound(SoundType.GLASS)
-					.setLightLevel((state) -> { return pixieType == -1 ? 0 : 10; })
-					.lootFrom(IafBlockRegistry.JAR_EMPTY)
+					.lightLevel((state) -> { return pixieType == -1 ? 0 : 10; })
+					.dropsLike(IafBlockRegistry.JAR_EMPTY)
 				: Properties
-					.create(Material.GLASS)
-					.notSolid()
-					.variableOpacity()
-					.hardnessAndResistance(1, 2)
+					.of(Material.GLASS)
+					.noOcclusion()
+					.dynamicShape()
+					.strength(1, 2)
 					.sound(SoundType.GLASS)
 		);
 
@@ -65,59 +65,59 @@ public class BlockJar extends ContainerBlock implements ICustomRendered {
         }
     }
 
-    public VoxelShape getShape(BlockState state, IBlockReader worldIn, BlockPos pos, ISelectionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter worldIn, BlockPos pos, CollisionContext context) {
         return AABB;
     }
 
-    public VoxelShape getCollisionShape(BlockState state, IBlockReader worldIn, BlockPos pos, ISelectionContext context) {
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter worldIn, BlockPos pos, CollisionContext context) {
         return AABB;
     }
 
 
-    public void onReplaced(BlockState state, World worldIn, BlockPos pos, BlockState newState, boolean isMoving) {
+    public void onRemove(BlockState state, Level worldIn, BlockPos pos, BlockState newState, boolean isMoving) {
         dropPixie(worldIn, pos);
-        super.onReplaced(state, worldIn, pos, newState, isMoving);
+        super.onRemove(state, worldIn, pos, newState, isMoving);
     }
 
-    public void dropPixie(World world, BlockPos pos) {
-        if (world.getTileEntity(pos) != null && world.getTileEntity(pos) instanceof TileEntityJar && ((TileEntityJar) world.getTileEntity(pos)).hasPixie) {
-            ((TileEntityJar) world.getTileEntity(pos)).releasePixie();
+    public void dropPixie(Level world, BlockPos pos) {
+        if (world.getBlockEntity(pos) != null && world.getBlockEntity(pos) instanceof TileEntityJar && ((TileEntityJar) world.getBlockEntity(pos)).hasPixie) {
+            ((TileEntityJar) world.getBlockEntity(pos)).releasePixie();
         }
     }
 
-    public ActionResultType onBlockActivated(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand handIn, BlockRayTraceResult resultIn) {
-        if (!empty && world.getTileEntity(pos) != null && world.getTileEntity(pos) instanceof TileEntityJar && ((TileEntityJar) world.getTileEntity(pos)).hasPixie && ((TileEntityJar) world.getTileEntity(pos)).hasProduced) {
-            ((TileEntityJar) world.getTileEntity(pos)).hasProduced = false;
+    public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand handIn, BlockHitResult resultIn) {
+        if (!empty && world.getBlockEntity(pos) != null && world.getBlockEntity(pos) instanceof TileEntityJar && ((TileEntityJar) world.getBlockEntity(pos)).hasPixie && ((TileEntityJar) world.getBlockEntity(pos)).hasProduced) {
+            ((TileEntityJar) world.getBlockEntity(pos)).hasProduced = false;
             ItemEntity item = new ItemEntity(world, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, new ItemStack(IafItemRegistry.PIXIE_DUST));
-            if (!world.isRemote) {
-                world.addEntity(item);
+            if (!world.isClientSide) {
+                world.addFreshEntity(item);
             }
-            world.playSound(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5, IafSoundRegistry.PIXIE_HURT, SoundCategory.NEUTRAL, 1, 1, false);
-            return ActionResultType.SUCCESS;
+            world.playLocalSound(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5, IafSoundRegistry.PIXIE_HURT, SoundSource.NEUTRAL, 1, 1, false);
+            return InteractionResult.SUCCESS;
         }
-        return ActionResultType.PASS;
+        return InteractionResult.PASS;
     }
 
 
-    public BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.MODEL;
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
     }
 
-    public void onBlockPlacedBy(World world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
-        if (world.getTileEntity(pos) != null && world.getTileEntity(pos) instanceof TileEntityJar) {
+    public void setPlacedBy(Level world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
+        if (world.getBlockEntity(pos) != null && world.getBlockEntity(pos) instanceof TileEntityJar) {
             if (!empty) {
-                ((TileEntityJar) world.getTileEntity(pos)).hasPixie = true;
-                ((TileEntityJar) world.getTileEntity(pos)).pixieType = pixieType;
+                ((TileEntityJar) world.getBlockEntity(pos)).hasPixie = true;
+                ((TileEntityJar) world.getBlockEntity(pos)).pixieType = pixieType;
             } else {
-                ((TileEntityJar) world.getTileEntity(pos)).hasPixie = false;
+                ((TileEntityJar) world.getBlockEntity(pos)).hasPixie = false;
             }
-            world.getTileEntity(pos).markDirty();
+            world.getBlockEntity(pos).setChanged();
         }
     }
 
     @Nullable
     @Override
-    public TileEntity createNewTileEntity(IBlockReader worldIn) {
+    public BlockEntity newBlockEntity(BlockGetter worldIn) {
         return new TileEntityJar(empty);
     }
 }

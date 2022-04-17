@@ -3,83 +3,83 @@ package com.github.alexthe666.iceandfire.block;
 import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.EntityIceDragon;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.Item;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.shapes.ISelectionContext;
-import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.IWorldReader;
-import net.minecraft.world.World;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.core.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.common.ToolType;
 
-import net.minecraft.block.AbstractBlock.Properties;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
 public class BlockIceSpikes extends Block {
-    protected static final VoxelShape AABB = Block.makeCuboidShape(1, 0, 1, 15, 8, 15);
+    protected static final VoxelShape AABB = Block.box(1, 0, 1, 15, 8, 15);
     public Item itemBlock;
 
     public BlockIceSpikes() {
         super(
     		Properties
-    			.create(Material.PACKED_ICE)
-    			.notSolid()
-    			.variableOpacity()
-    			.tickRandomly()
+    			.of(Material.ICE_SOLID)
+    			.noOcclusion()
+    			.dynamicShape()
+    			.randomTicks()
     			.sound(SoundType.GLASS)
-    			.hardnessAndResistance(2.5F)
+    			.strength(2.5F)
     			.harvestLevel(1)
     			.harvestTool(ToolType.PICKAXE)
-    			.setRequiresTool()
+    			.requiresCorrectToolForDrops()
 		);
 
         this.setRegistryName(IceAndFire.MODID, "dragon_ice_spikes");
     }
 
-    public BlockState updatePostPlacement(BlockState stateIn, Direction facing, BlockState facingState, IWorld worldIn, BlockPos currentPos, BlockPos facingPos) {
-        return !stateIn.isValidPosition(worldIn, currentPos) ? Blocks.AIR.getDefaultState() : super.updatePostPlacement(stateIn, facing, facingState, worldIn, currentPos, facingPos);
+    public BlockState updateShape(BlockState stateIn, Direction facing, BlockState facingState, LevelAccessor worldIn, BlockPos currentPos, BlockPos facingPos) {
+        return !stateIn.canSurvive(worldIn, currentPos) ? Blocks.AIR.defaultBlockState() : super.updateShape(stateIn, facing, facingState, worldIn, currentPos, facingPos);
     }
 
-    public boolean isValidPosition(BlockState state, IWorldReader worldIn, BlockPos pos) {
-        BlockPos blockpos = pos.down();
+    public boolean canSurvive(BlockState state, LevelReader worldIn, BlockPos pos) {
+        BlockPos blockpos = pos.below();
         return this.isValidGround(worldIn.getBlockState(blockpos), worldIn, blockpos);
     }
 
-    public boolean propagatesSkylightDown(BlockState state, IBlockReader reader, BlockPos pos) {
+    public boolean propagatesSkylightDown(BlockState state, BlockGetter reader, BlockPos pos) {
         return true;
     }
 
-    private boolean isValidGround(BlockState blockState, IWorldReader worldIn, BlockPos blockpos) {
-        return blockState.isSolid();
+    private boolean isValidGround(BlockState blockState, LevelReader worldIn, BlockPos blockpos) {
+        return blockState.canOcclude();
     }
 
-    public VoxelShape getShape(BlockState state, IBlockReader worldIn, BlockPos pos, ISelectionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter worldIn, BlockPos pos, CollisionContext context) {
         return AABB;
     }
 
-    public VoxelShape getCollisionShape(BlockState state, IBlockReader worldIn, BlockPos pos, ISelectionContext context) {
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter worldIn, BlockPos pos, CollisionContext context) {
         return AABB;
     }
 
-    public void onEntityWalk(World worldIn, BlockPos pos, Entity entityIn) {
+    public void stepOn(Level worldIn, BlockPos pos, Entity entityIn) {
         if (!(entityIn instanceof EntityIceDragon)) {
-            entityIn.attackEntityFrom(DamageSource.CACTUS, 1);
-            if (entityIn instanceof LivingEntity && entityIn.getMotion().x != 0 && entityIn.getMotion().z != 0) {
-                ((LivingEntity) entityIn).applyKnockback(0.5F, entityIn.getMotion().x, entityIn.getMotion().z);
+            entityIn.hurt(DamageSource.CACTUS, 1);
+            if (entityIn instanceof LivingEntity && entityIn.getDeltaMovement().x != 0 && entityIn.getDeltaMovement().z != 0) {
+                ((LivingEntity) entityIn).knockback(0.5F, entityIn.getDeltaMovement().x, entityIn.getDeltaMovement().z);
             }
         }
     }
 
-    public boolean isTransparent(BlockState state) {
+    public boolean useShapeForLightOcclusion(BlockState state) {
         return true;
     }
 

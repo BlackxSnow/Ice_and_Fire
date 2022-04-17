@@ -4,21 +4,21 @@ import java.util.Random;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.BushBlock;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.state.BooleanProperty;
-import net.minecraft.state.StateContainer;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.IWorldReader;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.BushBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.core.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
 
-import net.minecraft.block.AbstractBlock.Properties;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
 public class BlockMyrmexBiolight extends BushBlock {
 
@@ -27,49 +27,49 @@ public class BlockMyrmexBiolight extends BushBlock {
     public BlockMyrmexBiolight(boolean jungle) {
         super(
 			Properties
-				.create(Material.PLANTS)
-				.notSolid()
-				.doesNotBlockMovement()
-				.variableOpacity()
-				.hardnessAndResistance(0)
-				.setLightLevel((state) -> { return 7; })
-				.sound(SoundType.PLANT).tickRandomly()
+				.of(Material.PLANT)
+				.noOcclusion()
+				.noCollission()
+				.dynamicShape()
+				.strength(0)
+				.lightLevel((state) -> { return 7; })
+				.sound(SoundType.GRASS).randomTicks()
 		);
 
         this.setRegistryName(IceAndFire.MODID, jungle ? "myrmex_jungle_biolight" : "myrmex_desert_biolight");
-        this.setDefaultState(this.getStateContainer().getBaseState().with(CONNECTED_DOWN, Boolean.valueOf(false)));
+        this.registerDefaultState(this.getStateDefinition().any().setValue(CONNECTED_DOWN, Boolean.valueOf(false)));
     }
 
-    public boolean isValidPosition(BlockState state, IWorldReader worldIn, BlockPos pos) {
-        BlockPos blockpos = pos.up();
-        return worldIn.getBlockState(blockpos).getBlock() == this || worldIn.getBlockState(blockpos).isSolid();
+    public boolean canSurvive(BlockState state, LevelReader worldIn, BlockPos pos) {
+        BlockPos blockpos = pos.above();
+        return worldIn.getBlockState(blockpos).getBlock() == this || worldIn.getBlockState(blockpos).canOcclude();
     }
 
 
-    public BlockState updatePostPlacement(BlockState stateIn, Direction facing, BlockState facingState, IWorld worldIn, BlockPos currentPos, BlockPos facingPos) {
-        boolean flag3 = worldIn.getBlockState(currentPos.down()).getBlock() == this;
-        return stateIn.with(CONNECTED_DOWN, flag3);
+    public BlockState updateShape(BlockState stateIn, Direction facing, BlockState facingState, LevelAccessor worldIn, BlockPos currentPos, BlockPos facingPos) {
+        boolean flag3 = worldIn.getBlockState(currentPos.below()).getBlock() == this;
+        return stateIn.setValue(CONNECTED_DOWN, flag3);
     }
 
-    public void tick(BlockState state, ServerWorld worldIn, BlockPos pos, Random rand) {
-        if (!worldIn.isRemote) {
+    public void tick(BlockState state, ServerLevel worldIn, BlockPos pos, Random rand) {
+        if (!worldIn.isClientSide) {
             this.updateState(state, worldIn, pos, state.getBlock());
         }
-        if (!worldIn.getBlockState(pos.up()).isSolid() && worldIn.getBlockState(pos.up()).getBlock() != this) {
+        if (!worldIn.getBlockState(pos.above()).canOcclude() && worldIn.getBlockState(pos.above()).getBlock() != this) {
             worldIn.destroyBlock(pos, true);
         }
     }
 
-    public void updateState(BlockState state, World worldIn, BlockPos pos, Block blockIn) {
-        boolean flag2 = state.get(CONNECTED_DOWN);
-        boolean flag3 = worldIn.getBlockState(pos.down()).getBlock() == this;
+    public void updateState(BlockState state, Level worldIn, BlockPos pos, Block blockIn) {
+        boolean flag2 = state.getValue(CONNECTED_DOWN);
+        boolean flag3 = worldIn.getBlockState(pos.below()).getBlock() == this;
         if (flag2 != flag3) {
-            worldIn.setBlockState(pos, state.with(CONNECTED_DOWN, Boolean.valueOf(flag3)), 3);
+            worldIn.setBlock(pos, state.setValue(CONNECTED_DOWN, Boolean.valueOf(flag3)), 3);
         }
 
     }
 
-    protected void fillStateContainer(StateContainer.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(CONNECTED_DOWN);
     }
 }

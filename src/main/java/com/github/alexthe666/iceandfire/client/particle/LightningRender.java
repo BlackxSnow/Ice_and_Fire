@@ -8,15 +8,15 @@ import java.util.Set;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.util.math.vector.Matrix4f;
+import com.mojang.math.Matrix4f;
 
 /*
     Lightning bolt effect code used with permission from aidancbrady
@@ -33,10 +33,10 @@ public class LightningRender {
 
     private final Map<Object, BoltOwnerData> boltOwners = new Object2ObjectOpenHashMap<>();
 
-    public void render(float partialTicks, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn) {
-        IVertexBuilder buffer = bufferIn.getBuffer(RenderType.getLightning());
-        Matrix4f matrix = matrixStackIn.getLast().getMatrix();
-        Timestamp timestamp = new Timestamp(minecraft.world.getGameTime(), partialTicks);
+    public void render(float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn) {
+        VertexConsumer buffer = bufferIn.getBuffer(RenderType.lightning());
+        Matrix4f matrix = matrixStackIn.last().pose();
+        Timestamp timestamp = new Timestamp(minecraft.level.getGameTime(), partialTicks);
         boolean refresh = timestamp.isPassed(refreshTimestamp, (1 / REFRESH_TIME));
         if (refresh) {
             refreshTimestamp = timestamp;
@@ -60,12 +60,12 @@ public class LightningRender {
     }
 
     public void update(Object owner, LightningBoltData newBoltData, float partialTicks) {
-        if (minecraft.world == null) {
+        if (minecraft.level == null) {
             return;
         }
         BoltOwnerData data = boltOwners.computeIfAbsent(owner, o -> new BoltOwnerData());
         data.lastBolt = newBoltData;
-        Timestamp timestamp = new Timestamp(minecraft.world.getGameTime(), partialTicks);
+        Timestamp timestamp = new Timestamp(minecraft.level.getGameTime(), partialTicks);
         if ((!data.lastBolt.getSpawnFunction().isConsecutive() || data.bolts.isEmpty()) && timestamp.isPassed(data.lastBoltTimestamp, data.lastBoltDelay)) {
             data.addBolt(new BoltInstance(newBoltData, timestamp), timestamp);
         }
@@ -99,12 +99,12 @@ public class LightningRender {
             this.createdTimestamp = timestamp;
         }
 
-        public void render(Matrix4f matrix, IVertexBuilder buffer, Timestamp timestamp) {
+        public void render(Matrix4f matrix, VertexConsumer buffer, Timestamp timestamp) {
             float lifeScale = timestamp.subtract(createdTimestamp).value() / bolt.getLifespan();
             Pair<Integer, Integer> bounds = bolt.getFadeFunction().getRenderBounds(renderQuads.size(), lifeScale);
             for (int i = bounds.getLeft(); i < bounds.getRight(); i++) {
-                renderQuads.get(i).getVecs().forEach(v -> buffer.pos(matrix, (float) v.x, (float) v.y, (float) v.z)
-                        .color(bolt.getColor().getX(), bolt.getColor().getY(), bolt.getColor().getZ(), bolt.getColor().getW())
+                renderQuads.get(i).getVecs().forEach(v -> buffer.vertex(matrix, (float) v.x, (float) v.y, (float) v.z)
+                        .color(bolt.getColor().x(), bolt.getColor().y(), bolt.getColor().z(), bolt.getColor().w())
                         .endVertex());
             }
         }

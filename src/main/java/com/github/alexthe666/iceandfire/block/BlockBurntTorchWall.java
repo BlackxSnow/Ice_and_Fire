@@ -4,28 +4,28 @@ import java.util.Random;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.WallTorchBlock;
-import net.minecraft.block.material.Material;
-import net.minecraft.particles.RedstoneParticleData;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.WallTorchBlock;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import net.minecraft.block.AbstractBlock.Properties;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
 public class BlockBurntTorchWall extends WallTorchBlock implements IDreadBlock {
 
     public BlockBurntTorchWall() {
         super(
-    		Properties.create(Material.WOOD)
-        		.setLightLevel((state) -> { return 0; })
-        		.sound(SoundType.WOOD).notSolid().variableOpacity()
-        		.lootFrom(IafBlockRegistry.BURNT_TORCH)
-                .doesNotBlockMovement(),
-    		RedstoneParticleData.REDSTONE_DUST
+    		Properties.of(Material.WOOD)
+        		.lightLevel((state) -> { return 0; })
+        		.sound(SoundType.WOOD).noOcclusion().dynamicShape()
+        		.dropsLike(IafBlockRegistry.BURNT_TORCH)
+                .noCollission(),
+    		DustParticleOptions.REDSTONE
 		);
 
         setRegistryName(IceAndFire.MODID, "burnt_torch_wall");
@@ -33,7 +33,7 @@ public class BlockBurntTorchWall extends WallTorchBlock implements IDreadBlock {
 
 
     @OnlyIn(Dist.CLIENT)
-    public void animateTick(BlockState stateIn, World worldIn, BlockPos pos, Random rand) {
+    public void animateTick(BlockState stateIn, Level worldIn, BlockPos pos, Random rand) {
 
     }
 }

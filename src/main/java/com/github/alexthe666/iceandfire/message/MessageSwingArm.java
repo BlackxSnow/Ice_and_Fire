@@ -4,9 +4,9 @@ import java.util.function.Supplier;
 
 import com.github.alexthe666.iceandfire.event.ServerEvents;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.Hand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.InteractionHand;
 import net.minecraftforge.fml.network.NetworkEvent;
 
 public class MessageSwingArm {
@@ -21,19 +21,19 @@ public class MessageSwingArm {
 
         public static void handle(MessageSwingArm message, Supplier<NetworkEvent.Context> context) {
             ((NetworkEvent.Context)context.get()).setPacketHandled(true);
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             if(player != null) {
-                ServerEvents.onLeftClick(player, player.getHeldItem(Hand.MAIN_HAND));
+                ServerEvents.onLeftClick(player, player.getItemInHand(InteractionHand.MAIN_HAND));
             }
         }
     }
 
 
-    public static MessageSwingArm read(PacketBuffer buf) {
+    public static MessageSwingArm read(FriendlyByteBuf buf) {
         return new MessageSwingArm();
     }
 
-    public static void write(MessageSwingArm message, PacketBuffer buf) {
+    public static void write(MessageSwingArm message, FriendlyByteBuf buf) {
     }
 
 }

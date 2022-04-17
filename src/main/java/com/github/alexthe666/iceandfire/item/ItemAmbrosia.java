@@ -1,11 +1,11 @@
 package com.github.alexthe666.iceandfire.item;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.level.Level;
 
 public class ItemAmbrosia extends ItemGenericFood {
 
@@ -13,15 +13,15 @@ public class ItemAmbrosia extends ItemGenericFood {
         super(5, 0.6F, false, false, true, "ambrosia", 1);
     }
 
-    public void onFoodEaten(ItemStack stack, World worldIn, LivingEntity livingEntity) {
-        livingEntity.addPotionEffect(new EffectInstance(Effects.STRENGTH, 3600, 2));
-        livingEntity.addPotionEffect(new EffectInstance(Effects.ABSORPTION, 3600, 2));
-        livingEntity.addPotionEffect(new EffectInstance(Effects.JUMP_BOOST, 3600, 2));
-        livingEntity.addPotionEffect(new EffectInstance(Effects.LUCK, 3600, 2));
+    public void onFoodEaten(ItemStack stack, Level worldIn, LivingEntity livingEntity) {
+        livingEntity.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 3600, 2));
+        livingEntity.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 3600, 2));
+        livingEntity.addEffect(new MobEffectInstance(MobEffects.JUMP, 3600, 2));
+        livingEntity.addEffect(new MobEffectInstance(MobEffects.LUCK, 3600, 2));
     }
 
-    public ItemStack onItemUseFinish(ItemStack stack, World worldIn, LivingEntity LivingEntity) {
-        super.onItemUseFinish(stack, worldIn, LivingEntity);
+    public ItemStack finishUsingItem(ItemStack stack, Level worldIn, LivingEntity LivingEntity) {
+        super.finishUsingItem(stack, worldIn, LivingEntity);
         return new ItemStack(Items.BOWL);
     }
 }

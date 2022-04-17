@@ -8,7 +8,7 @@ buildscript {
     }
 
     dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
         classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
     }
 }
@@ -31,15 +31,17 @@ repositories{
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = '2.1.9-1.16.5'
+apply from: 'https://raw.githubusercontent.com/SizableShrimp/Forge-Class-Remapper/main/classremapper.gradle'
+
+version = '2.1.9-1.18.2'
 group = 'com.github.alexthe667' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'iceandfire'
 
-sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '17' // Need this here so eclipse task generates correctly.
 
 println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
 minecraft {
-    mappings channel: 'snapshot', version: '20210309-1.16.5'
+    mappings channel: 'official', version: '1.18.2'
     // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
 
     accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
@@ -121,10 +123,10 @@ mixin {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
-    minecraft 'net.minecraftforge:forge:1.16.5-36.0.46'
-    compileOnly fg.deobf("mezz.jei:jei-1.16.2:7.1.3.19:api")
-    runtimeOnly fg.deobf("mezz.jei:jei-1.16.2:7.1.3.19")
-    compile "curse.maven:citadel-331936:3441030"
+    minecraft 'net.minecraftforge:forge:1.18.2-40.0.52'
+    compileOnly fg.deobf("mezz.jei:jei-1.18.2:9.5.5.174:api")
+    runtimeOnly fg.deobf("mezz.jei:jei-1.18.2:9.5.5.174")
+    implementation "curse.maven:citadel-331936:3732360"
 
 }
 

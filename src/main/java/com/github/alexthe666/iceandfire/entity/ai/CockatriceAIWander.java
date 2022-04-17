@@ -4,11 +4,11 @@ import java.util.EnumSet;
 
 import com.github.alexthe666.iceandfire.entity.EntityCockatrice;
 
-import net.minecraft.entity.ai.RandomPositionGenerator;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.entity.ai.util.RandomPos;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class CockatriceAIWander extends Goal {
     private EntityCockatrice cockatrice;
@@ -27,20 +27,20 @@ public class CockatriceAIWander extends Goal {
         this.cockatrice = creatureIn;
         this.speed = speedIn;
         this.executionChance = chance;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
-    public boolean shouldExecute() {
+    public boolean canUse() {
         if (!cockatrice.canMove() || cockatrice.getCommand() != 0) {
             return false;
         }
         if (!this.mustUpdate) {
-            if (this.cockatrice.getRNG().nextInt(executionChance) != 0) {
+            if (this.cockatrice.getRandom().nextInt(executionChance) != 0) {
                 return false;
             }
         }
-        Vector3d Vector3d = RandomPositionGenerator.findRandomTarget(this.cockatrice, 10, 7);
+        Vec3 Vector3d = RandomPos.getPos(this.cockatrice, 10, 7);
         if (Vector3d == null) {
             return false;
         } else {
@@ -54,13 +54,13 @@ public class CockatriceAIWander extends Goal {
     }
 
     @Override
-    public boolean shouldContinueExecuting() {
-        return !this.cockatrice.getNavigator().noPath();
+    public boolean canContinueToUse() {
+        return !this.cockatrice.getNavigation().isDone();
     }
 
     @Override
-    public void startExecuting() {
-        this.cockatrice.getNavigator().tryMoveToXYZ(this.xPosition, this.yPosition, this.zPosition, this.speed);
+    public void start() {
+        this.cockatrice.getNavigation().moveTo(this.xPosition, this.yPosition, this.zPosition, this.speed);
     }
 
     public void makeUpdate() {

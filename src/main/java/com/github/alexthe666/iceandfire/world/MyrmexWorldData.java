@@ -8,41 +8,41 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.util.MyrmexHive;
 import com.google.common.collect.Lists;
 
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.ListNBT;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
-import net.minecraft.world.storage.DimensionSavedDataManager;
-import net.minecraft.world.storage.WorldSavedData;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.DimensionDataStorage;
+import net.minecraft.world.level.saveddata.SavedData;
 
-public class MyrmexWorldData extends WorldSavedData {
+public class MyrmexWorldData extends SavedData {
 
     private static final String IDENTIFIER = "iceandfire_myrmex";
     private final List<BlockPos> villagerPositionsList = Lists.newArrayList();
     private final List<MyrmexHive> hiveList = Lists.newArrayList();
-    private World world;
+    private Level world;
     private int tickCounter;
 
     public MyrmexWorldData() {
         super(IDENTIFIER);
     }
 
-    public MyrmexWorldData(World world) {
+    public MyrmexWorldData(Level world) {
         super(IDENTIFIER);
         this.world = world;
-        this.markDirty();
+        this.setDirty();
     }
 
-    public static MyrmexWorldData get(World world) {
-        if (world instanceof ServerWorld) {
-            ServerWorld overworld = world.getServer().getWorld(world.getDimensionKey());
+    public static MyrmexWorldData get(Level world) {
+        if (world instanceof ServerLevel) {
+            ServerLevel overworld = world.getServer().getLevel(world.dimension());
 
-            DimensionSavedDataManager storage = overworld.getSavedData();
-            MyrmexWorldData data = storage.getOrCreate(MyrmexWorldData::new, IDENTIFIER);
+            DimensionDataStorage storage = overworld.getDataStorage();
+            MyrmexWorldData data = storage.computeIfAbsent(MyrmexWorldData::new, IDENTIFIER);
             if (data != null) {
                 data.world = world;
-                data.markDirty();
+                data.setDirty();
             }
             return data;
         }
@@ -50,11 +50,11 @@ public class MyrmexWorldData extends WorldSavedData {
         return new MyrmexWorldData();
     }
 
-    public static void addHive(World world, MyrmexHive hive) {
+    public static void addHive(Level world, MyrmexHive hive) {
         get(world).hiveList.add(hive);
     }
 
-    public void setWorldsForAll(World worldIn) {
+    public void setWorldsForAll(Level worldIn) {
         this.world = worldIn;
         for (MyrmexHive village : this.hiveList) {
             village.setWorld(worldIn);
@@ -78,7 +78,7 @@ public class MyrmexWorldData extends WorldSavedData {
 
             if (village.isAnnihilated()) {
                 iterator.remove();
-                this.markDirty();
+                this.setDirty();
             }
         }
     }
@@ -92,7 +92,7 @@ public class MyrmexWorldData extends WorldSavedData {
         double d0 = 3.4028234663852886E38D;
 
         for (MyrmexHive village1 : this.hiveList) {
-            double d1 = village1.getCenter().distanceSq(doorBlock);
+            double d1 = village1.getCenter().distSqr(doorBlock);
 
             if (d1 < d0) {
                 float f = (float) (radius + village1.getVillageRadius());
@@ -123,24 +123,24 @@ public class MyrmexWorldData extends WorldSavedData {
         }
     }
 
-    public void read(CompoundNBT nbt) {
+    public void load(CompoundTag nbt) {
         this.tickCounter = nbt.getInt("Tick");
-        ListNBT nbttaglist = nbt.getList("Hives", 10);
+        ListTag nbttaglist = nbt.getList("Hives", 10);
 
         for (int i = 0; i < nbttaglist.size(); ++i) {
-            CompoundNBT CompoundNBT = nbttaglist.getCompound(i);
+            CompoundTag CompoundNBT = nbttaglist.getCompound(i);
             MyrmexHive village = new MyrmexHive();
             village.readVillageDataFromNBT(CompoundNBT);
             this.hiveList.add(village);
         }
     }
 
-    public CompoundNBT write(CompoundNBT compound) {
+    public CompoundTag save(CompoundTag compound) {
         compound.putInt("Tick", this.tickCounter);
-        ListNBT nbttaglist = new ListNBT();
+        ListTag nbttaglist = new ListTag();
 
         for (MyrmexHive village : this.hiveList) {
-            CompoundNBT CompoundNBT = new CompoundNBT();
+            CompoundTag CompoundNBT = new CompoundTag();
             village.writeVillageDataToNBT(CompoundNBT);
             nbttaglist.add(CompoundNBT);
         }

@@ -2,10 +2,10 @@ package com.github.alexthe666.iceandfire.client.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 
-import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.WorldVertexBufferUploader;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 
 public class GuiMainMenuBlit {
     public static void blit(int p_blit_0_, int p_blit_1_, int p_blit_2_, int p_blit_3_, float p_blit_4_, float p_blit_5_, int p_blit_6_, int p_blit_7_, int p_blit_8_, int p_blit_9_, float alpha) {
@@ -21,14 +21,14 @@ public class GuiMainMenuBlit {
     }
 
     protected static void innerBlit(int p_innerBlit_0_, int p_innerBlit_1_, int p_innerBlit_2_, int p_innerBlit_3_, int p_innerBlit_4_, float p_innerBlit_5_, float p_innerBlit_6_, float p_innerBlit_7_, float p_innerBlit_8_, float alpha) {
-        BufferBuilder bufferbuilder = Tessellator.getInstance().getBuffer();
-        bufferbuilder.begin(7, DefaultVertexFormats.POSITION_COLOR_TEX);
-        bufferbuilder.pos((double)p_innerBlit_0_, (double)p_innerBlit_3_, (double)p_innerBlit_4_).color(1, 1, 1, alpha).tex(p_innerBlit_5_, p_innerBlit_8_).endVertex();
-        bufferbuilder.pos((double)p_innerBlit_1_, (double)p_innerBlit_3_, (double)p_innerBlit_4_).color(1, 1, 1, alpha).tex(p_innerBlit_6_, p_innerBlit_8_).endVertex();
-        bufferbuilder.pos((double)p_innerBlit_1_, (double)p_innerBlit_2_, (double)p_innerBlit_4_).color(1, 1, 1, alpha).tex(p_innerBlit_6_, p_innerBlit_7_).endVertex();
-        bufferbuilder.pos((double)p_innerBlit_0_, (double)p_innerBlit_2_, (double)p_innerBlit_4_).color(1, 1, 1, alpha).tex(p_innerBlit_5_, p_innerBlit_7_).endVertex();
-        bufferbuilder.finishDrawing();
+        BufferBuilder bufferbuilder = Tesselator.getInstance().getBuilder();
+        bufferbuilder.begin(7, DefaultVertexFormat.POSITION_COLOR_TEX);
+        bufferbuilder.vertex((double)p_innerBlit_0_, (double)p_innerBlit_3_, (double)p_innerBlit_4_).color(1, 1, 1, alpha).uv(p_innerBlit_5_, p_innerBlit_8_).endVertex();
+        bufferbuilder.vertex((double)p_innerBlit_1_, (double)p_innerBlit_3_, (double)p_innerBlit_4_).color(1, 1, 1, alpha).uv(p_innerBlit_6_, p_innerBlit_8_).endVertex();
+        bufferbuilder.vertex((double)p_innerBlit_1_, (double)p_innerBlit_2_, (double)p_innerBlit_4_).color(1, 1, 1, alpha).uv(p_innerBlit_6_, p_innerBlit_7_).endVertex();
+        bufferbuilder.vertex((double)p_innerBlit_0_, (double)p_innerBlit_2_, (double)p_innerBlit_4_).color(1, 1, 1, alpha).uv(p_innerBlit_5_, p_innerBlit_7_).endVertex();
+        bufferbuilder.end();
         RenderSystem.enableAlphaTest();
-        WorldVertexBufferUploader.draw(bufferbuilder);
+        BufferUploader.end(bufferbuilder);
     }
 }

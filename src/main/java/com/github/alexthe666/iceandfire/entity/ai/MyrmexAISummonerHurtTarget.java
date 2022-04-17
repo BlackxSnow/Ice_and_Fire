@@ -4,11 +4,11 @@ import java.util.EnumSet;
 
 import com.github.alexthe666.iceandfire.entity.EntityMyrmexSwarmer;
 
-import net.minecraft.entity.EntityPredicate;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.TargetGoal;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.target.TargetGoal;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class MyrmexAISummonerHurtTarget extends TargetGoal {
     EntityMyrmexSwarmer tameable;
@@ -18,29 +18,29 @@ public class MyrmexAISummonerHurtTarget extends TargetGoal {
     public MyrmexAISummonerHurtTarget(EntityMyrmexSwarmer theEntityMyrmexSwarmerIn) {
         super(theEntityMyrmexSwarmerIn, false);
         this.tameable = theEntityMyrmexSwarmerIn;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
-    public boolean shouldExecute() {
+    public boolean canUse() {
         LivingEntity LivingEntity = this.tameable.getSummoner();
 
         if (LivingEntity == null) {
             return false;
         } else {
-            this.attacker = LivingEntity.getLastAttackedEntity();
-            int i = LivingEntity.getLastAttackedEntityTime();
-            return i != this.timestamp && this.isSuitableTarget(this.attacker, EntityPredicate.DEFAULT) && this.tameable.shouldAttackEntity(this.attacker, LivingEntity);
+            this.attacker = LivingEntity.getLastHurtMob();
+            int i = LivingEntity.getLastHurtMobTimestamp();
+            return i != this.timestamp && this.canAttack(this.attacker, TargetingConditions.DEFAULT) && this.tameable.shouldAttackEntity(this.attacker, LivingEntity);
         }
     }
 
-    public void startExecuting() {
-        this.goalOwner.setAttackTarget(this.attacker);
+    public void start() {
+        this.mob.setTarget(this.attacker);
         LivingEntity LivingEntity = this.tameable.getSummoner();
 
         if (LivingEntity != null) {
-            this.timestamp = LivingEntity.getLastAttackedEntityTime();
+            this.timestamp = LivingEntity.getLastHurtMobTimestamp();
         }
 
-        super.startExecuting();
+        super.start();
     }
 }

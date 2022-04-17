@@ -7,19 +7,19 @@ import com.github.alexthe666.iceandfire.block.IafBlockRegistry;
 import com.github.alexthe666.iceandfire.entity.DragonType;
 import com.github.alexthe666.iceandfire.entity.EntityDragonBase;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.server.SUpdateTileEntityPacket;
-import net.minecraft.tileentity.ITickableTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.RayTraceContext;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.block.entity.TickableBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
-public class TileEntityDragonforgeInput extends TileEntity implements ITickableTileEntity {
+public class TileEntityDragonforgeInput extends BlockEntity implements TickableBlockEntity {
     private static final int LURE_DISTANCE = 50;
     private static final Direction[] HORIZONTALS = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
     private int ticksSinceDragonFire;
@@ -44,11 +44,11 @@ public class TileEntityDragonforgeInput extends TileEntity implements ITickableT
             ticksSinceDragonFire--;
         }
         if ((ticksSinceDragonFire == 0 || core == null) && this.isActive()) {
-            TileEntity tileentity = world.getTileEntity(pos);
-            world.setBlockState(pos, getDeactivatedState());
+            BlockEntity tileentity = level.getBlockEntity(worldPosition);
+            level.setBlockAndUpdate(worldPosition, getDeactivatedState());
             if (tileentity != null) {
-                tileentity.validate();
-                world.setTileEntity(pos, tileentity);
+                tileentity.clearRemoved();
+                level.setBlockEntity(worldPosition, tileentity);
             }
         }
         if (isAssembled())
@@ -57,47 +57,47 @@ public class TileEntityDragonforgeInput extends TileEntity implements ITickableT
     }
 
     @Override
-    public SUpdateTileEntityPacket getUpdatePacket() {
-        return new SUpdateTileEntityPacket(pos, 1, getUpdateTag());
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return new ClientboundBlockEntityDataPacket(worldPosition, 1, getUpdateTag());
     }
 
     @Override
-    public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket packet) {
-        read(this.getBlockState(), packet.getNbtCompound());
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
+        load(this.getBlockState(), packet.getTag());
     }
 
-    public CompoundNBT getUpdateTag() {
-        return this.write(new CompoundNBT());
+    public CompoundTag getUpdateTag() {
+        return this.save(new CompoundTag());
     }
 
     protected void lureDragons() {
-        Vector3d targetPosition = new Vector3d(
-            this.getPos().getX() + 0.5F,
-            this.getPos().getY() + 0.5F,
-            this.getPos().getZ() + 0.5F
+        Vec3 targetPosition = new Vec3(
+            this.getBlockPos().getX() + 0.5F,
+            this.getBlockPos().getY() + 0.5F,
+            this.getBlockPos().getZ() + 0.5F
         );
 
-        AxisAlignedBB searchArea = new AxisAlignedBB(
-            (double) pos.getX() - LURE_DISTANCE,
-            (double) pos.getY() - LURE_DISTANCE,
-            (double) pos.getZ() - LURE_DISTANCE,
-            (double) pos.getX() + LURE_DISTANCE,
-            (double) pos.getY() + LURE_DISTANCE,
-            (double) pos.getZ() + LURE_DISTANCE
+        AABB searchArea = new AABB(
+            (double) worldPosition.getX() - LURE_DISTANCE,
+            (double) worldPosition.getY() - LURE_DISTANCE,
+            (double) worldPosition.getZ() - LURE_DISTANCE,
+            (double) worldPosition.getX() + LURE_DISTANCE,
+            (double) worldPosition.getY() + LURE_DISTANCE,
+            (double) worldPosition.getZ() + LURE_DISTANCE
         );
 
         boolean dragonSelected = false;
-        for (EntityDragonBase dragon : world.getEntitiesWithinAABB(EntityDragonBase.class, searchArea)) {
+        for (EntityDragonBase dragon : level.getEntitiesOfClass(EntityDragonBase.class, searchArea)) {
             if (!dragonSelected &&
                 // Dragon Checks
                 getDragonType() == DragonType.getIntFromType(dragon.dragonType) &&
-                (dragon.isChained() || dragon.isTamed()) &&
+                (dragon.isChained() || dragon.isTame()) &&
                 canSeeInput(dragon, targetPosition)
             ) {
-                dragon.burningTarget = this.pos;
+                dragon.burningTarget = this.worldPosition;
                 dragonSelected = true;
 
-            } else if(dragon.burningTarget == this.pos) {
+            } else if(dragon.burningTarget == this.worldPosition) {
                 dragon.burningTarget = null;
                 dragon.setBreathingFire(false);
             }
@@ -114,11 +114,11 @@ public class TileEntityDragonforgeInput extends TileEntity implements ITickableT
         core = null;
     }
 
-    private boolean canSeeInput(EntityDragonBase dragon, Vector3d target) {
+    private boolean canSeeInput(EntityDragonBase dragon, Vec3 target) {
         if (target != null) {
-            RayTraceResult rayTrace = this.world.rayTraceBlocks(new RayTraceContext(dragon.getHeadPosition(), target, RayTraceContext.BlockMode.COLLIDER, RayTraceContext.FluidMode.NONE, dragon));
-            if (rayTrace != null && rayTrace.getHitVec() != null) {
-                double distance = target.distanceTo(rayTrace.getHitVec());
+            HitResult rayTrace = this.level.clip(new ClipContext(dragon.getHeadPosition(), target, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, dragon));
+            if (rayTrace != null && rayTrace.getLocation() != null) {
+                double distance = target.distanceTo(rayTrace.getLocation());
                 return distance < 1.0F;
             }
         }
@@ -128,46 +128,46 @@ public class TileEntityDragonforgeInput extends TileEntity implements ITickableT
     private BlockState getDeactivatedState() {
         switch (getDragonType()){
             case 0:
-                return IafBlockRegistry.DRAGONFORGE_FIRE_INPUT.getDefaultState().with(BlockDragonforgeInput.ACTIVE, false);
+                return IafBlockRegistry.DRAGONFORGE_FIRE_INPUT.defaultBlockState().setValue(BlockDragonforgeInput.ACTIVE, false);
             case 1:
-                return IafBlockRegistry.DRAGONFORGE_ICE_INPUT.getDefaultState().with(BlockDragonforgeInput.ACTIVE, false);
+                return IafBlockRegistry.DRAGONFORGE_ICE_INPUT.defaultBlockState().setValue(BlockDragonforgeInput.ACTIVE, false);
             case 2:
-                return IafBlockRegistry.DRAGONFORGE_LIGHTNING_INPUT.getDefaultState().with(BlockDragonforgeInput.ACTIVE, false);
+                return IafBlockRegistry.DRAGONFORGE_LIGHTNING_INPUT.defaultBlockState().setValue(BlockDragonforgeInput.ACTIVE, false);
 
         }
-        return IafBlockRegistry.DRAGONFORGE_FIRE_INPUT.getDefaultState().with(BlockDragonforgeInput.ACTIVE, false);
+        return IafBlockRegistry.DRAGONFORGE_FIRE_INPUT.defaultBlockState().setValue(BlockDragonforgeInput.ACTIVE, false);
     }
 
     private int getDragonType() {
-        if(world.getBlockState(pos).getBlock() == IafBlockRegistry.DRAGONFORGE_FIRE_INPUT){
+        if(level.getBlockState(worldPosition).getBlock() == IafBlockRegistry.DRAGONFORGE_FIRE_INPUT){
             return 0;
         }
-        if(world.getBlockState(pos).getBlock() == IafBlockRegistry.DRAGONFORGE_ICE_INPUT){
+        if(level.getBlockState(worldPosition).getBlock() == IafBlockRegistry.DRAGONFORGE_ICE_INPUT){
             return 1;
         }
-        if(world.getBlockState(pos).getBlock() == IafBlockRegistry.DRAGONFORGE_LIGHTNING_INPUT){
+        if(level.getBlockState(worldPosition).getBlock() == IafBlockRegistry.DRAGONFORGE_LIGHTNING_INPUT){
             return 2;
         }
         return 0;
     }
 
     private boolean isActive() {
-        return world.getBlockState(pos).getBlock() instanceof BlockDragonforgeInput && world.getBlockState(pos).get(BlockDragonforgeInput.ACTIVE);
+        return level.getBlockState(worldPosition).getBlock() instanceof BlockDragonforgeInput && level.getBlockState(worldPosition).getValue(BlockDragonforgeInput.ACTIVE);
     }
 
     private void setActive() {
-        TileEntity tileentity = world.getTileEntity(pos);
-        world.setBlockState(this.pos, getDeactivatedState().with(BlockDragonforgeInput.ACTIVE, true));
+        BlockEntity tileentity = level.getBlockEntity(worldPosition);
+        level.setBlockAndUpdate(this.worldPosition, getDeactivatedState().setValue(BlockDragonforgeInput.ACTIVE, true));
         if (tileentity != null) {
-            tileentity.validate();
-            world.setTileEntity(pos, tileentity);
+            tileentity.clearRemoved();
+            level.setBlockEntity(worldPosition, tileentity);
         }
     }
 
     private TileEntityDragonforge getConnectedTileEntity() {
         for (Direction facing : HORIZONTALS) {
-            if (world.getTileEntity(pos.offset(facing)) != null && world.getTileEntity(pos.offset(facing)) instanceof TileEntityDragonforge) {
-                return (TileEntityDragonforge) world.getTileEntity(pos.offset(facing));
+            if (level.getBlockEntity(worldPosition.relative(facing)) != null && level.getBlockEntity(worldPosition.relative(facing)) instanceof TileEntityDragonforge) {
+                return (TileEntityDragonforge) level.getBlockEntity(worldPosition.relative(facing));
             }
         }
         return null;

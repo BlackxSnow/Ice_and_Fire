@@ -6,9 +6,9 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.tile.TileEntityJar;
 import com.github.alexthe666.iceandfire.entity.tile.TileEntityPixieHouse;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -26,11 +26,11 @@ public class MessageUpdatePixieHouseModel {
     public MessageUpdatePixieHouseModel() {
     }
 
-    public static MessageUpdatePixieHouseModel read(PacketBuffer buf) {
+    public static MessageUpdatePixieHouseModel read(FriendlyByteBuf buf) {
         return new MessageUpdatePixieHouseModel(buf.readLong(), buf.readInt());
     }
 
-    public static void write(MessageUpdatePixieHouseModel message, PacketBuffer buf) {
+    public static void write(MessageUpdatePixieHouseModel message, FriendlyByteBuf buf) {
         buf.writeLong(message.blockPos);
         buf.writeInt(message.houseType);
     }
@@ -42,20 +42,20 @@ public class MessageUpdatePixieHouseModel {
 
         public static void handle(MessageUpdatePixieHouseModel message, Supplier<NetworkEvent.Context> context) {
             context.get().setPacketHandled(true);
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             if(context.get().getDirection().getReceptionSide() == LogicalSide.CLIENT){
                 player = IceAndFire.PROXY.getClientSidePlayer();
             }
             if (player != null) {
-                if (player.world != null) {
-                    BlockPos pos = BlockPos.fromLong(message.blockPos);
-                    if (player.world.getTileEntity(pos) != null) {
-                        if (player.world.getTileEntity(pos) instanceof TileEntityPixieHouse) {
-                            TileEntityPixieHouse house = (TileEntityPixieHouse) player.world.getTileEntity(pos);
+                if (player.level != null) {
+                    BlockPos pos = BlockPos.of(message.blockPos);
+                    if (player.level.getBlockEntity(pos) != null) {
+                        if (player.level.getBlockEntity(pos) instanceof TileEntityPixieHouse) {
+                            TileEntityPixieHouse house = (TileEntityPixieHouse) player.level.getBlockEntity(pos);
                             house.houseType = message.houseType;
                         }
-                        if (player.world.getTileEntity(pos) instanceof TileEntityJar) {
-                            TileEntityJar jar = (TileEntityJar) player.world.getTileEntity(pos);
+                        if (player.level.getBlockEntity(pos) instanceof TileEntityJar) {
+                            TileEntityJar jar = (TileEntityJar) player.level.getBlockEntity(pos);
                             jar.pixieType = message.houseType;
                         }
                     }

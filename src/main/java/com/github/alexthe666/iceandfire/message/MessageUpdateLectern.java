@@ -7,10 +7,10 @@ import com.github.alexthe666.iceandfire.entity.tile.TileEntityLectern;
 import com.github.alexthe666.iceandfire.enums.EnumBestiaryPages;
 import com.github.alexthe666.iceandfire.item.IafItemRegistry;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -36,11 +36,11 @@ public class MessageUpdateLectern {
     public MessageUpdateLectern() {
     }
 
-    public static MessageUpdateLectern read(PacketBuffer buf) {
+    public static MessageUpdateLectern read(FriendlyByteBuf buf) {
         return new MessageUpdateLectern(buf.readLong(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readInt());
     }
 
-    public static void write(MessageUpdateLectern message, PacketBuffer buf) {
+    public static void write(MessageUpdateLectern message, FriendlyByteBuf buf) {
         buf.writeLong(message.blockPos);
         buf.writeInt(message.selectedPages1);
         buf.writeInt(message.selectedPages2);
@@ -55,22 +55,22 @@ public class MessageUpdateLectern {
 
         public static void handle(MessageUpdateLectern message, Supplier<NetworkEvent.Context> context) {
             context.get().setPacketHandled(true);
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             if(context.get().getDirection().getReceptionSide() == LogicalSide.CLIENT){
                 player = IceAndFire.PROXY.getClientSidePlayer();
             }
             if (player != null) {
-                if (player.world != null) {
-                    BlockPos pos = BlockPos.fromLong(message.blockPos);
-                    if (player.world.getTileEntity(pos) != null) {
-                        if (player.world.getTileEntity(pos) instanceof TileEntityLectern) {
-                            TileEntityLectern lectern = (TileEntityLectern) player.world.getTileEntity(pos);
+                if (player.level != null) {
+                    BlockPos pos = BlockPos.of(message.blockPos);
+                    if (player.level.getBlockEntity(pos) != null) {
+                        if (player.level.getBlockEntity(pos) instanceof TileEntityLectern) {
+                            TileEntityLectern lectern = (TileEntityLectern) player.level.getBlockEntity(pos);
                             if(message.updateStack){
-                                ItemStack bookStack = lectern.getStackInSlot(0);
+                                ItemStack bookStack = lectern.getItem(0);
                                 if(bookStack.getItem() == IafItemRegistry.BESTIARY){
                                     EnumBestiaryPages.addPage(EnumBestiaryPages.fromInt(message.pageOrdinal), bookStack);
                                 }
-                                lectern.randomizePages(bookStack, lectern.getStackInSlot(1));
+                                lectern.randomizePages(bookStack, lectern.getItem(1));
                             }else{
                                 lectern.selectedPages[0] = EnumBestiaryPages.fromInt(message.selectedPages1);
                                 lectern.selectedPages[1] = EnumBestiaryPages.fromInt(message.selectedPages2);

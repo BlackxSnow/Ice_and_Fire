@@ -22,15 +22,15 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screen.MainMenuScreen;
+import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.client.settings.PointOfView;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.client.CameraType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.vector.Matrix4f;
 import net.minecraftforge.client.event.EntityViewRenderEvent;
@@ -51,8 +51,8 @@ public class ClientEvents {
     private final Random rand = new Random();
 
     private static boolean shouldCancelRender(LivingEntity living) {
-        if (living.getRidingEntity() != null && living.getRidingEntity() instanceof EntityDragonBase) {
-            return ClientProxy.currentDragonRiders.contains(living.getUniqueID()) || living == Minecraft.getInstance().player && Minecraft.getInstance().gameSettings.getPointOfView().func_243192_a();
+        if (living.getVehicle() != null && living.getVehicle() instanceof EntityDragonBase) {
+            return ClientProxy.currentDragonRiders.contains(living.getUUID()) || living == Minecraft.getInstance().player && Minecraft.getInstance().options.getCameraType().isFirstPerson();
         }
         return false;
     }
@@ -66,30 +66,30 @@ public class ClientEvents {
 
     @SubscribeEvent
     public void onCameraSetup(EntityViewRenderEvent.CameraSetup event) {
-        PlayerEntity player = Minecraft.getInstance().player;
-        if (player.getRidingEntity() != null) {
-            if (player.getRidingEntity() instanceof EntityDragonBase) {
+        Player player = Minecraft.getInstance().player;
+        if (player.getVehicle() != null) {
+            if (player.getVehicle() instanceof EntityDragonBase) {
                 int currentView = IceAndFire.PROXY.getDragon3rdPersonView();
-                EntityDragonBase dragon = (EntityDragonBase) player.getRidingEntity();
-                float scale = ((EntityDragonBase) player.getRidingEntity()).getRenderSize() / 3;
-                if (Minecraft.getInstance().gameSettings.getPointOfView() == PointOfView.THIRD_PERSON_BACK) {
+                EntityDragonBase dragon = (EntityDragonBase) player.getVehicle();
+                float scale = ((EntityDragonBase) player.getVehicle()).getRenderSize() / 3;
+                if (Minecraft.getInstance().options.getCameraType() == CameraType.THIRD_PERSON_BACK) {
                     if (currentView == 0) {
                     } else if (currentView == 1) {
-                        event.getInfo().movePosition(-scale * 1.2F, 0F, 0);
+                        event.getInfo().move(-scale * 1.2F, 0F, 0);
                     } else if (currentView == 2) {
-                        event.getInfo().movePosition(-scale * 3F, 0F, 0);
+                        event.getInfo().move(-scale * 3F, 0F, 0);
                     } else if (currentView == 3) {
-                        event.getInfo().movePosition(-scale * 5F, 0F, 0);
+                        event.getInfo().move(-scale * 5F, 0F, 0);
                     }
                 }
-                if (Minecraft.getInstance().gameSettings.getPointOfView() == PointOfView.THIRD_PERSON_FRONT) {
+                if (Minecraft.getInstance().options.getCameraType() == CameraType.THIRD_PERSON_FRONT) {
                     if (currentView == 0) {
                     } else if (currentView == 1) {
-                        event.getInfo().movePosition(-scale * 1.2F, 0F, 0);
+                        event.getInfo().move(-scale * 1.2F, 0F, 0);
                     } else if (currentView == 2) {
-                        event.getInfo().movePosition(-scale * 3F, 0F, 0);
+                        event.getInfo().move(-scale * 3F, 0F, 0);
                     } else if (currentView == 3) {
-                        event.getInfo().movePosition(-scale * 5F, 0F, 0);
+                        event.getInfo().move(-scale * 5F, 0F, 0);
                     }
                 }
 
@@ -100,9 +100,9 @@ public class ClientEvents {
 
     @SubscribeEvent
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
-        if (event.getEntityLiving() instanceof PlayerEntity) {
-            PlayerEntity player = (PlayerEntity) event.getEntityLiving();
-            if (player.world.isRemote && IafKeybindRegistry.dragon_change_view.isKeyDown()) {
+        if (event.getEntityLiving() instanceof Player) {
+            Player player = (Player) event.getEntityLiving();
+            if (player.level.isClientSide && IafKeybindRegistry.dragon_change_view.isDown()) {
                 int currentView = IceAndFire.PROXY.getDragon3rdPersonView();
                 if (currentView + 1 > 3) {
                     currentView = 0;
@@ -112,13 +112,13 @@ public class ClientEvents {
                 IceAndFire.PROXY.setDragon3rdPersonView(currentView);
             }
 
-            if (player.world.isRemote) {
+            if (player.level.isClientSide) {
                 GameRenderer renderer = Minecraft.getInstance().gameRenderer;
                 EntitySiren siren = SirenProperties.getSiren(player);
 
-                if (IafConfig.sirenShader && siren == null && renderer != null && renderer.getShaderGroup() != null) {
-                    if (SIREN_SHADER.toString().equals(renderer.getShaderGroup().getShaderGroupName()))
-                        renderer.stopUseShader();
+                if (IafConfig.sirenShader && siren == null && renderer != null && renderer.currentEffect() != null) {
+                    if (SIREN_SHADER.toString().equals(renderer.currentEffect().getName()))
+                        renderer.shutdownEffect();
                 }
 
                 if (siren == null)
@@ -126,17 +126,17 @@ public class ClientEvents {
 
                 boolean isCharmed = SirenProperties.isCharmed(player);
 
-                if (IafConfig.sirenShader && !isCharmed && renderer != null && renderer.getShaderGroup() != null && SIREN_SHADER.toString().equals(renderer.getShaderGroup().getShaderGroupName())) {
-                    renderer.stopUseShader();
+                if (IafConfig.sirenShader && !isCharmed && renderer != null && renderer.currentEffect() != null && SIREN_SHADER.toString().equals(renderer.currentEffect().getName())) {
+                    renderer.shutdownEffect();
                 }
 
                 if (isCharmed) {
-                    if (player.world.isRemote && rand.nextInt(40) == 0) {
-                        IceAndFire.PROXY.spawnParticle("siren_appearance", player.getPosX(), player.getPosY(), player.getPosZ(), siren.getHairColor(), 0, 0);
+                    if (player.level.isClientSide && rand.nextInt(40) == 0) {
+                        IceAndFire.PROXY.spawnParticle("siren_appearance", player.getX(), player.getY(), player.getZ(), siren.getHairColor(), 0, 0);
                     }
 
-                    if (IafConfig.sirenShader && renderer.getShaderGroup() == null) {
-                        renderer.loadShader(SIREN_SHADER);
+                    if (IafConfig.sirenShader && renderer.currentEffect() == null) {
+                        renderer.loadEffect(SIREN_SHADER);
                     }
 
                 }
@@ -170,7 +170,7 @@ public class ClientEvents {
 
     @SubscribeEvent
     public void onGuiOpened(GuiOpenEvent event) {
-        if (IafConfig.customMainMenu && event.getGui() instanceof MainMenuScreen && !(event.getGui() instanceof IceAndFireMainMenu)) {
+        if (IafConfig.customMainMenu && event.getGui() instanceof TitleScreen && !(event.getGui() instanceof IceAndFireMainMenu)) {
             event.setGui(new IceAndFireMainMenu());
         }
     }
@@ -178,14 +178,14 @@ public class ClientEvents {
     @SubscribeEvent
     public void onEntityMount(EntityMountEvent event) {
         if (IafConfig.dragonAuto3rdPerson) {
-            if (event.getEntityBeingMounted() instanceof EntityDragonBase && event.getWorldObj().isRemote && event.getEntityMounting() == Minecraft.getInstance().player) {
+            if (event.getEntityBeingMounted() instanceof EntityDragonBase && event.getWorldObj().isClientSide && event.getEntityMounting() == Minecraft.getInstance().player) {
                 EntityDragonBase dragon = (EntityDragonBase) event.getEntityBeingMounted();
-                if (dragon.isTamed() && dragon.isOwner(Minecraft.getInstance().player)) {
+                if (dragon.isTame() && dragon.isOwnedBy(Minecraft.getInstance().player)) {
                     if (event.isDismounting()) {
-                        Minecraft.getInstance().gameSettings.setPointOfView(PointOfView.values()[IceAndFire.PROXY.getPreviousViewType()]);
+                        Minecraft.getInstance().options.setCameraType(CameraType.values()[IceAndFire.PROXY.getPreviousViewType()]);
                     } else {
-                        IceAndFire.PROXY.setPreviousViewType(Minecraft.getInstance().gameSettings.getPointOfView().ordinal());
-                        Minecraft.getInstance().gameSettings.setPointOfView(PointOfView.values()[1]);
+                        IceAndFire.PROXY.setPreviousViewType(Minecraft.getInstance().options.getCameraType().ordinal());
+                        Minecraft.getInstance().options.setCameraType(CameraType.values()[1]);
                         IceAndFire.PROXY.setDragon3rdPersonView(2);
                     }
                 }

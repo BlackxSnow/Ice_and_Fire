@@ -2,11 +2,11 @@ package com.github.alexthe666.iceandfire.client.render.entity;
 
 import com.github.alexthe666.iceandfire.client.model.ModelAmphithere;
 import com.github.alexthe666.iceandfire.entity.EntityAmphithere;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.entity.EntityRendererManager;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -24,18 +24,18 @@ public class RenderAmphithere extends MobRenderer<EntityAmphithere, ModelAmphith
     public static final ResourceLocation TEXTURE_YELLOW = new ResourceLocation("iceandfire:textures/models/amphithere/amphithere_yellow.png");
     public static final ResourceLocation TEXTURE_YELLOW_BLINK = new ResourceLocation("iceandfire:textures/models/amphithere/amphithere_yellow_blink.png");
 
-    public RenderAmphithere(EntityRendererManager renderManager) {
+    public RenderAmphithere(EntityRenderDispatcher renderManager) {
         super(renderManager, new ModelAmphithere(), 1.6F);
     }
 
     @Override
-    protected void preRenderCallback(EntityAmphithere entity, MatrixStack matrixStackIn, float partialTickTime) {
+    protected void scale(EntityAmphithere entity, PoseStack matrixStackIn, float partialTickTime) {
         matrixStackIn.scale(2.0F, 2.0F, 2.0F);
 
     }
 
     @Override
-    public ResourceLocation getEntityTexture(EntityAmphithere amphithere) {
+    public ResourceLocation getTextureLocation(EntityAmphithere amphithere) {
         switch (amphithere.getVariant()) {
             case 0:
                 if (amphithere.isBlinking()) {

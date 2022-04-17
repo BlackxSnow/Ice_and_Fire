@@ -1,19 +1,19 @@
 package com.github.alexthe666.iceandfire.entity;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 
 public class EntitSlowPart extends EntityMutlipartPart{
-    public EntitSlowPart(EntityType t, World world) {
+    public EntitSlowPart(EntityType t, Level world) {
         super(t, world);
     }
 
-    public EntitSlowPart(FMLPlayMessages.SpawnEntity spawnEntity, World worldIn) {
+    public EntitSlowPart(FMLPlayMessages.SpawnEntity spawnEntity, Level worldIn) {
         this(IafEntityRegistry.SLOW_MULTIPART, worldIn);
     }
 
@@ -25,7 +25,7 @@ public class EntitSlowPart extends EntityMutlipartPart{
         super(IafEntityRegistry.SLOW_MULTIPART, parent, radius, angleYaw, offsetY, sizeX, sizeY, damageMultiplier);
     }
 
-    protected void updateFallState(double y, boolean onGroundIn, BlockState state, BlockPos pos) {
+    protected void checkFallDamage(double y, boolean onGroundIn, BlockState state, BlockPos pos) {
     }
 
     protected boolean isSlowFollow(){

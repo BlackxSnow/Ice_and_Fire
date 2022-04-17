@@ -5,145 +5,145 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.util.IDragonProjectile;
 import com.github.alexthe666.iceandfire.misc.IafDamageRegistry;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.projectile.AbstractFireballEntity;
-import net.minecraft.entity.projectile.ProjectileHelper;
-import net.minecraft.network.IPacket;
-import net.minecraft.particles.ParticleTypes;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.math.EntityRayTraceResult;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.GameRules;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.projectile.Fireball;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class EntityDragonIceCharge extends AbstractFireballEntity implements IDragonProjectile {
+public class EntityDragonIceCharge extends Fireball implements IDragonProjectile {
 
     public int ticksInAir;
 
-    public EntityDragonIceCharge(EntityType type, World worldIn) {
+    public EntityDragonIceCharge(EntityType type, Level worldIn) {
         super(type, worldIn);
 
     }
 
-    public EntityDragonIceCharge(FMLPlayMessages.SpawnEntity spawnEntity, World worldIn) {
+    public EntityDragonIceCharge(FMLPlayMessages.SpawnEntity spawnEntity, Level worldIn) {
         this(IafEntityRegistry.ICE_DRAGON_CHARGE, worldIn);
     }
 
-    public EntityDragonIceCharge(EntityType type, World worldIn, double posX, double posY, double posZ, double accelX, double accelY, double accelZ) {
+    public EntityDragonIceCharge(EntityType type, Level worldIn, double posX, double posY, double posZ, double accelX, double accelY, double accelZ) {
         super(type, posX, posY, posZ, accelX, accelY, accelZ, worldIn);
-        double d0 = MathHelper.sqrt(accelX * accelX + accelY * accelY + accelZ * accelZ);
-        this.accelerationX = accelX / d0 * 0.07D;
-        this.accelerationY = accelY / d0 * 0.07D;
-        this.accelerationZ = accelZ / d0 * 0.07D;
+        double d0 = Mth.sqrt(accelX * accelX + accelY * accelY + accelZ * accelZ);
+        this.xPower = accelX / d0 * 0.07D;
+        this.yPower = accelY / d0 * 0.07D;
+        this.zPower = accelZ / d0 * 0.07D;
     }
 
-    public EntityDragonIceCharge(EntityType type, World worldIn, EntityDragonBase shooter, double accelX, double accelY, double accelZ) {
+    public EntityDragonIceCharge(EntityType type, Level worldIn, EntityDragonBase shooter, double accelX, double accelY, double accelZ) {
         super(type, shooter, accelX, accelY, accelZ, worldIn);
-        double d0 = MathHelper.sqrt(accelX * accelX + accelY * accelY + accelZ * accelZ);
-        this.accelerationX = accelX / d0 * 0.07D;
-        this.accelerationY = accelY / d0 * 0.07D;
-        this.accelerationZ = accelZ / d0 * 0.07D;
+        double d0 = Mth.sqrt(accelX * accelX + accelY * accelY + accelZ * accelZ);
+        this.xPower = accelX / d0 * 0.07D;
+        this.yPower = accelY / d0 * 0.07D;
+        this.zPower = accelZ / d0 * 0.07D;
     }
 
 
-    protected boolean isFireballFiery() {
+    protected boolean shouldBurn() {
         return false;
     }
 
     @Override
-    public boolean canBeCollidedWith() {
+    public boolean isPickable() {
         return false;
     }
 
     public void tick() {
-        Entity shootingEntity = this.getShooter();
-        if (this.world.isRemote) {
+        Entity shootingEntity = this.getOwner();
+        if (this.level.isClientSide) {
             for (int i = 0; i < 14; ++i) {
-                IceAndFire.PROXY.spawnParticle("dragonice", this.getPosX() + this.rand.nextDouble() * 1 * (this.rand.nextBoolean() ? -1 : 1), this.getPosY() + this.rand.nextDouble() * 1 * (this.rand.nextBoolean() ? -1 : 1), this.getPosZ() + this.rand.nextDouble() * 1 * (this.rand.nextBoolean() ? -1 : 1), 0.0D, 0.0D, 0.0D);
+                IceAndFire.PROXY.spawnParticle("dragonice", this.getX() + this.random.nextDouble() * 1 * (this.random.nextBoolean() ? -1 : 1), this.getY() + this.random.nextDouble() * 1 * (this.random.nextBoolean() ? -1 : 1), this.getZ() + this.random.nextDouble() * 1 * (this.random.nextBoolean() ? -1 : 1), 0.0D, 0.0D, 0.0D);
             }
         }
-        if (this.world.isRemote || (shootingEntity == null || shootingEntity.isAlive()) && this.world.isBlockLoaded(this.getPosition())) {
+        if (this.level.isClientSide || (shootingEntity == null || shootingEntity.isAlive()) && this.level.hasChunkAt(this.blockPosition())) {
             super.tick();
             ++this.ticksInAir;
-            Vector3d Vector3d = this.getMotion();
-            RayTraceResult raytraceresult = ProjectileHelper.func_234618_a_(this, this::canHitMob);
+            Vec3 Vector3d = this.getDeltaMovement();
+            HitResult raytraceresult = ProjectileUtil.getHitResult(this, this::canHitMob);
 
-            if (!world.isRemote && raytraceresult != null) {
-                this.onImpact(raytraceresult);
+            if (!level.isClientSide && raytraceresult != null) {
+                this.onHit(raytraceresult);
             }
 
-            double d0 = this.getPosX() + Vector3d.x;
-            double d1 = this.getPosY() + Vector3d.y;
-            double d2 = this.getPosZ() + Vector3d.z;
-            float f = MathHelper.sqrt(horizontalMag(Vector3d));
-            this.rotationYaw = (float) (MathHelper.atan2(Vector3d.x, Vector3d.z) * (double) (180F / (float) Math.PI));
-            for (this.rotationPitch = (float) (MathHelper.atan2(Vector3d.y, f) * (double) (180F / (float) Math.PI)); this.rotationPitch - this.prevRotationPitch < -180.0F; this.prevRotationPitch -= 360.0F) {
+            double d0 = this.getX() + Vector3d.x;
+            double d1 = this.getY() + Vector3d.y;
+            double d2 = this.getZ() + Vector3d.z;
+            float f = Mth.sqrt(getHorizontalDistanceSqr(Vector3d));
+            this.yRot = (float) (Mth.atan2(Vector3d.x, Vector3d.z) * (double) (180F / (float) Math.PI));
+            for (this.xRot = (float) (Mth.atan2(Vector3d.y, f) * (double) (180F / (float) Math.PI)); this.xRot - this.xRotO < -180.0F; this.xRotO -= 360.0F) {
             }
-            while (this.rotationPitch - this.prevRotationPitch >= 180.0F) {
-                this.prevRotationPitch += 360.0F;
-            }
-
-            while (this.rotationYaw - this.prevRotationYaw < -180.0F) {
-                this.prevRotationYaw -= 360.0F;
+            while (this.xRot - this.xRotO >= 180.0F) {
+                this.xRotO += 360.0F;
             }
 
-            while (this.rotationYaw - this.prevRotationYaw >= 180.0F) {
-                this.prevRotationYaw += 360.0F;
+            while (this.yRot - this.yRotO < -180.0F) {
+                this.yRotO -= 360.0F;
             }
 
-            this.rotationPitch = MathHelper.lerp(0.2F, this.prevRotationPitch, this.rotationPitch);
-            this.rotationYaw = MathHelper.lerp(0.2F, this.prevRotationYaw, this.rotationYaw);
+            while (this.yRot - this.yRotO >= 180.0F) {
+                this.yRotO += 360.0F;
+            }
+
+            this.xRot = Mth.lerp(0.2F, this.xRotO, this.xRot);
+            this.yRot = Mth.lerp(0.2F, this.yRotO, this.yRot);
             float f1 = 0.99F;
             float f2 = 0.06F;
 
 
             if (this.isInWater()) {
                 for (int i = 0; i < 4; ++i) {
-                    this.world.addParticle(ParticleTypes.BUBBLE, this.getPosX() - this.getMotion().x * 0.25D, this.getPosY() - this.getMotion().y * 0.25D, this.getPosZ() - this.getMotion().z * 0.25D, this.getMotion().x, this.getMotion().y, this.getMotion().z);
+                    this.level.addParticle(ParticleTypes.BUBBLE, this.getX() - this.getDeltaMovement().x * 0.25D, this.getY() - this.getDeltaMovement().y * 0.25D, this.getZ() - this.getDeltaMovement().z * 0.25D, this.getDeltaMovement().x, this.getDeltaMovement().y, this.getDeltaMovement().z);
                 }
 
                 f = 0.8F;
             }
-            this.setPosition(d0, d1, d2);
-            this.world.addParticle(this.getParticle(), this.getPosX(), this.getPosY() + 0.5D, this.getPosZ(), 0.0D, 0.0D, 0.0D);
-            this.setPosition(this.getPosX(), this.getPosY(), this.getPosZ());
+            this.setPos(d0, d1, d2);
+            this.level.addParticle(this.getTrailParticle(), this.getX(), this.getY() + 0.5D, this.getZ(), 0.0D, 0.0D, 0.0D);
+            this.setPos(this.getX(), this.getY(), this.getZ());
         } else {
             this.remove();
         }
     }
 
     protected boolean canHitMob(Entity hitMob) {
-        Entity shooter = getShooter();
-        return hitMob != this && super.func_230298_a_(hitMob) && !(shooter == null || hitMob.isOnSameTeam(shooter)) && !(hitMob instanceof EntityDragonPart);
+        Entity shooter = getOwner();
+        return hitMob != this && super.canHitEntity(hitMob) && !(shooter == null || hitMob.isAlliedTo(shooter)) && !(hitMob instanceof EntityDragonPart);
     }
 
     @Override
-    protected void onImpact(RayTraceResult movingObject) {
-        Entity shootingEntity = this.getShooter();
-        boolean flag = this.world.getGameRules().getBoolean(GameRules.MOB_GRIEFING);
-        if (!this.world.isRemote) {
-            if (movingObject.getType() == RayTraceResult.Type.ENTITY) {
-                Entity entity = ((EntityRayTraceResult) movingObject).getEntity();
+    protected void onHit(HitResult movingObject) {
+        Entity shootingEntity = this.getOwner();
+        boolean flag = this.level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
+        if (!this.level.isClientSide) {
+            if (movingObject.getType() == HitResult.Type.ENTITY) {
+                Entity entity = ((EntityHitResult) movingObject).getEntity();
 
                 if (entity != null && entity instanceof IDragonProjectile) {
                     return;
                 }
                 if (entity != null && shootingEntity != null && shootingEntity instanceof EntityDragonBase && entity != null) {
                     EntityDragonBase dragon = (EntityDragonBase) shootingEntity;
-                    if (dragon.isOnSameTeam(entity) || dragon.isEntityEqual(entity) || dragon.isPart(entity)) {
+                    if (dragon.isAlliedTo(entity) || dragon.is(entity) || dragon.isPart(entity)) {
                         return;
                     }
                 }
                 if (entity == null || !(entity instanceof IDragonProjectile) && entity != shootingEntity && shootingEntity instanceof EntityDragonBase) {
                     EntityDragonBase dragon = (EntityDragonBase) shootingEntity;
-                    if (shootingEntity != null && (entity == shootingEntity || (entity instanceof TameableEntity && ((EntityDragonBase) shootingEntity).isOwner(((EntityDragonBase) shootingEntity).getOwner())))) {
+                    if (shootingEntity != null && (entity == shootingEntity || (entity instanceof TamableAnimal && ((EntityDragonBase) shootingEntity).isOwnedBy(((EntityDragonBase) shootingEntity).getOwner())))) {
                         return;
                     }
                     if (dragon != null) {
@@ -151,43 +151,43 @@ public class EntityDragonIceCharge extends AbstractFireballEntity implements IDr
                     }
                     this.remove();
                 }
-                if (entity != null && !(entity instanceof IDragonProjectile) && !entity.isEntityEqual(shootingEntity)) {
-                    if (shootingEntity != null && (entity.isEntityEqual(shootingEntity) || (shootingEntity instanceof EntityDragonBase & entity instanceof TameableEntity && ((EntityDragonBase) shootingEntity).getOwner() == ((TameableEntity) entity).getOwner()))) {
+                if (entity != null && !(entity instanceof IDragonProjectile) && !entity.is(shootingEntity)) {
+                    if (shootingEntity != null && (entity.is(shootingEntity) || (shootingEntity instanceof EntityDragonBase & entity instanceof TamableAnimal && ((EntityDragonBase) shootingEntity).getOwner() == ((TamableAnimal) entity).getOwner()))) {
                         return;
                     }
                     if (shootingEntity != null && shootingEntity instanceof EntityDragonBase) {
                         float damageAmount = (float) IafConfig.dragonAttackDamageIce * ((EntityDragonBase) shootingEntity).getDragonStage();
-                        entity.attackEntityFrom(IafDamageRegistry.DRAGON_ICE, damageAmount);
+                        entity.hurt(IafDamageRegistry.DRAGON_ICE, damageAmount);
                         if (entity instanceof LivingEntity && ((LivingEntity) entity).getHealth() == 0) {
                             ((EntityDragonBase) shootingEntity).randomizeAttacks();
                         }
                     }
                     if(shootingEntity instanceof LivingEntity){
-                        this.applyEnchantments((LivingEntity)shootingEntity, entity);
+                        this.doEnchantDamageEffects((LivingEntity)shootingEntity, entity);
                     }
                     this.remove();
                 }
             }
         }
-        if(movingObject.getType() != RayTraceResult.Type.MISS) {
+        if(movingObject.getType() != HitResult.Type.MISS) {
             if (shootingEntity instanceof EntityDragonBase && IafConfig.dragonGriefing != 2 && !this.isInWater()) {
-                IafDragonDestructionManager.destroyAreaIceCharge(world, this.getPosition(), ((EntityDragonBase) shootingEntity));
+                IafDragonDestructionManager.destroyAreaIceCharge(level, this.blockPosition(), ((EntityDragonBase) shootingEntity));
             }
             this.remove();
         }
     }
 
     @Override
-    public boolean attackEntityFrom(DamageSource source, float amount) {
+    public boolean hurt(DamageSource source, float amount) {
         return false;
     }
 
-    public float getCollisionBorderSize() {
+    public float getPickRadius() {
         return 0F;
     }
 
     @Override
-    public IPacket<?> createSpawnPacket() {
+    public Packet<?> getAddEntityPacket() {
         return NetworkHooks.getEntitySpawningPacket(this);
     }
 

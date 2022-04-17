@@ -1,38 +1,38 @@
 package com.github.alexthe666.iceandfire.entity.tile;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.server.SUpdateTileEntityPacket;
-import net.minecraft.tileentity.ITickableTileEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.block.entity.TickableBlockEntity;
 import net.minecraft.tileentity.MobSpawnerTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.WeightedSpawnerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.spawner.AbstractSpawner;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.SpawnData;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.BaseSpawner;
 
-public class TileEntityDreadSpawner extends TileEntity implements ITickableTileEntity {
+public class TileEntityDreadSpawner extends BlockEntity implements TickableBlockEntity {
     private final DreadSpawnerBaseLogic spawnerLogic = new DreadSpawnerBaseLogic() {
         public void broadcastEvent(int id) {
-            TileEntityDreadSpawner.this.world.addBlockEvent(TileEntityDreadSpawner.this.pos, Blocks.SPAWNER, id, 0);
+            TileEntityDreadSpawner.this.level.blockEvent(TileEntityDreadSpawner.this.worldPosition, Blocks.SPAWNER, id, 0);
         }
 
-        public World getWorld() {
-            return TileEntityDreadSpawner.this.world;
+        public Level getLevel() {
+            return TileEntityDreadSpawner.this.level;
         }
 
-        public BlockPos getSpawnerPosition() {
-            return TileEntityDreadSpawner.this.pos;
+        public BlockPos getPos() {
+            return TileEntityDreadSpawner.this.worldPosition;
         }
 
-        public void setNextSpawnData(WeightedSpawnerEntity nextSpawnData) {
+        public void setNextSpawnData(SpawnData nextSpawnData) {
             super.setNextSpawnData(nextSpawnData);
 
-            if (this.getWorld() != null) {
-                BlockState BlockState = this.getWorld().getBlockState(this.getSpawnerPosition());
-                this.getWorld().notifyBlockUpdate(TileEntityDreadSpawner.this.pos, BlockState, BlockState, 4);
+            if (this.getLevel() != null) {
+                BlockState BlockState = this.getLevel().getBlockState(this.getPos());
+                this.getLevel().sendBlockUpdated(TileEntityDreadSpawner.this.worldPosition, BlockState, BlockState, 4);
             }
         }
     };
@@ -41,14 +41,14 @@ public class TileEntityDreadSpawner extends TileEntity implements ITickableTileE
         super(IafTileEntityRegistry.DREAD_SPAWNER);
     }
 
-    public void read(BlockState blockstate, CompoundNBT compound) {
-        super.read(blockstate, compound);
-        this.spawnerLogic.read(compound);
+    public void load(BlockState blockstate, CompoundTag compound) {
+        super.load(blockstate, compound);
+        this.spawnerLogic.load(compound);
     }
 
-    public CompoundNBT write(CompoundNBT compound) {
-        super.write(compound);
-        this.spawnerLogic.write(compound);
+    public CompoundTag save(CompoundTag compound) {
+        super.save(compound);
+        this.spawnerLogic.save(compound);
         return compound;
     }
 
@@ -64,29 +64,29 @@ public class TileEntityDreadSpawner extends TileEntity implements ITickableTileE
      * modded TE's, this packet comes back to you clientside in {@link #onDataPacket}
      */
     @Override
-    public SUpdateTileEntityPacket getUpdatePacket() {
-        return new SUpdateTileEntityPacket(pos, 1, getUpdateTag());
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return new ClientboundBlockEntityDataPacket(worldPosition, 1, getUpdateTag());
     }
 
     @Override
-    public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket packet) {
-        read(this.getBlockState(), packet.getNbtCompound());
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
+        load(this.getBlockState(), packet.getTag());
     }
 
-    public CompoundNBT getUpdateTag() {
-        return this.write(new CompoundNBT());
+    public CompoundTag getUpdateTag() {
+        return this.save(new CompoundTag());
     }
 
 
-    public boolean receiveClientEvent(int id, int type) {
-        return this.spawnerLogic.setDelayToMin(id) || super.receiveClientEvent(id, type);
+    public boolean triggerEvent(int id, int type) {
+        return this.spawnerLogic.onEventTriggered(id) || super.triggerEvent(id, type);
     }
 
-    public boolean onlyOpsCanSetNbt() {
+    public boolean onlyOpCanSetNbt() {
         return true;
     }
 
-    public AbstractSpawner getSpawnerBaseLogic() {
+    public BaseSpawner getSpawnerBaseLogic() {
         return this.spawnerLogic;
     }
 }

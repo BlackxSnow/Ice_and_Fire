@@ -1,47 +1,47 @@
 package com.github.alexthe666.iceandfire.client.render.entity;
 
 import com.github.alexthe666.iceandfire.block.IafBlockRegistry;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.block.Blocks;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.BlockRendererDispatcher;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EntityRendererManager;
-import net.minecraft.client.renderer.texture.AtlasTexture;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.entity.projectile.AbstractFireballEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.world.entity.projectile.Fireball;
+import net.minecraft.resources.ResourceLocation;
+import com.mojang.math.Vector3f;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class RenderDragonFireCharge extends EntityRenderer<AbstractFireballEntity> {
+public class RenderDragonFireCharge extends EntityRenderer<Fireball> {
 
     public boolean isFire;
 
-    public RenderDragonFireCharge(EntityRendererManager renderManager, boolean isFire) {
+    public RenderDragonFireCharge(EntityRenderDispatcher renderManager, boolean isFire) {
         super(renderManager);
         this.isFire = isFire;
     }
 
     @Override
-    public ResourceLocation getEntityTexture(AbstractFireballEntity entity) {
-        return AtlasTexture.LOCATION_BLOCKS_TEXTURE;
+    public ResourceLocation getTextureLocation(Fireball entity) {
+        return TextureAtlas.LOCATION_BLOCKS;
     }
 
     @Override
-    public void render(AbstractFireballEntity entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn) {
-        BlockRendererDispatcher blockrendererdispatcher = Minecraft.getInstance().getBlockRendererDispatcher();
-        matrixStackIn.push();
+    public void render(Fireball entityIn, float entityYaw, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn, int packedLightIn) {
+        BlockRenderDispatcher blockrendererdispatcher = Minecraft.getInstance().getBlockRenderer();
+        matrixStackIn.pushPose();
         matrixStackIn.translate(0.0D, 0.5D, 0.0D);
-        matrixStackIn.rotate(Vector3f.YP.rotationDegrees(-90.0F));
+        matrixStackIn.mulPose(Vector3f.YP.rotationDegrees(-90.0F));
         matrixStackIn.translate(-0.5D, -0.5D, 0.5D);
-        matrixStackIn.rotate(Vector3f.YP.rotationDegrees(90.0F));
-        Minecraft.getInstance().getBlockRendererDispatcher().renderBlock(isFire ? Blocks.MAGMA_BLOCK.getDefaultState() : IafBlockRegistry.DRAGON_ICE.getDefaultState(), matrixStackIn, bufferIn, packedLightIn, OverlayTexture.NO_OVERLAY);
-        matrixStackIn.pop();
+        matrixStackIn.mulPose(Vector3f.YP.rotationDegrees(90.0F));
+        Minecraft.getInstance().getBlockRenderer().renderSingleBlock(isFire ? Blocks.MAGMA_BLOCK.defaultBlockState() : IafBlockRegistry.DRAGON_ICE.defaultBlockState(), matrixStackIn, bufferIn, packedLightIn, OverlayTexture.NO_OVERLAY);
+        matrixStackIn.popPose();
     }
 
 }

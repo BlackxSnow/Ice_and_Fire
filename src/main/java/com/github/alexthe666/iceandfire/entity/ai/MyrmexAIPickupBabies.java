@@ -12,13 +12,13 @@ import com.github.alexthe666.iceandfire.entity.EntityMyrmexEgg;
 import com.github.alexthe666.iceandfire.entity.EntityMyrmexWorker;
 import com.google.common.base.Predicate;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.TargetGoal;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.target.TargetGoal;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.phys.AABB;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class MyrmexAIPickupBabies<T extends ItemEntity> extends TargetGoal {
     protected final DragonAITargetItems.Sorter theNearestAttackableTargetSorter;
@@ -36,15 +36,15 @@ public class MyrmexAIPickupBabies<T extends ItemEntity> extends TargetGoal {
             }
         };
         this.myrmex = myrmex;
-        this.setMutexFlags(EnumSet.of(Flag.TARGET));
+        this.setFlags(EnumSet.of(Flag.TARGET));
     }
 
     @Override
-    public boolean shouldExecute() {
-        if (!this.myrmex.canMove() || this.myrmex.holdingSomething() || !this.myrmex.getNavigator().noPath() || this.myrmex.shouldEnterHive() || !this.myrmex.keepSearching || this.myrmex.holdingBaby()) {
+    public boolean canUse() {
+        if (!this.myrmex.canMove() || this.myrmex.holdingSomething() || !this.myrmex.getNavigation().isDone() || this.myrmex.shouldEnterHive() || !this.myrmex.keepSearching || this.myrmex.holdingBaby()) {
             return false;
         }
-        List<LivingEntity> listBabies = this.goalOwner.world.getLoadedEntitiesWithinAABB(LivingEntity.class, this.getTargetableArea(20), this.targetEntitySelector);
+        List<LivingEntity> listBabies = this.mob.level.getLoadedEntitiesOfClass(LivingEntity.class, this.getTargetableArea(20), this.targetEntitySelector);
         if (listBabies.isEmpty()) {
             return false;
         } else {
@@ -54,31 +54,31 @@ public class MyrmexAIPickupBabies<T extends ItemEntity> extends TargetGoal {
         }
     }
 
-    protected AxisAlignedBB getTargetableArea(double targetDistance) {
-        return this.goalOwner.getBoundingBox().grow(targetDistance, 4.0D, targetDistance);
+    protected AABB getTargetableArea(double targetDistance) {
+        return this.mob.getBoundingBox().inflate(targetDistance, 4.0D, targetDistance);
     }
 
     @Override
-    public void startExecuting() {
-        this.goalOwner.getNavigator().tryMoveToXYZ(this.targetEntity.getPosX(), this.targetEntity.getPosY(), this.targetEntity.getPosZ(), 1);
-        super.startExecuting();
+    public void start() {
+        this.mob.getNavigation().moveTo(this.targetEntity.getX(), this.targetEntity.getY(), this.targetEntity.getZ(), 1);
+        super.start();
     }
 
     @Override
     public void tick() {
         super.tick();
         if (this.targetEntity == null || this.targetEntity != null && !this.targetEntity.isAlive()) {
-            this.resetTask();
+            this.stop();
         }
-        if (this.targetEntity != null && this.targetEntity.isAlive() && this.goalOwner.getDistanceSq(this.targetEntity) < 2) {
+        if (this.targetEntity != null && this.targetEntity.isAlive() && this.mob.distanceToSqr(this.targetEntity) < 2) {
             this.targetEntity.startRiding(this.myrmex);
-            resetTask();
+            stop();
         }
     }
 
     @Override
-    public boolean shouldContinueExecuting() {
-        return !this.goalOwner.getNavigator().noPath();
+    public boolean canContinueToUse() {
+        return !this.mob.getNavigation().isDone();
     }
 
     public static class Sorter implements Comparator<Entity> {
@@ -89,8 +89,8 @@ public class MyrmexAIPickupBabies<T extends ItemEntity> extends TargetGoal {
         }
 
         public int compare(Entity p_compare_1_, Entity p_compare_2_) {
-            double d0 = this.theEntity.getDistanceSq(p_compare_1_);
-            double d1 = this.theEntity.getDistanceSq(p_compare_2_);
+            double d0 = this.theEntity.distanceToSqr(p_compare_1_);
+            double d1 = this.theEntity.distanceToSqr(p_compare_2_);
             return d0 < d1 ? -1 : (d0 > d1 ? 1 : 0);
         }
     }

@@ -1,17 +1,17 @@
 package com.github.alexthe666.iceandfire.entity.tile;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.server.SUpdateTileEntityPacket;
-import net.minecraft.tileentity.ITickableTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.block.entity.TickableBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.Direction;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-public class TileEntityDreadPortal extends TileEntity implements ITickableTileEntity {
+public class TileEntityDreadPortal extends BlockEntity implements TickableBlockEntity {
     private long age;
     private BlockPos exitPortal;
     private boolean exactTeleport;
@@ -20,8 +20,8 @@ public class TileEntityDreadPortal extends TileEntity implements ITickableTileEn
         super(IafTileEntityRegistry.DREAD_PORTAL);
     }
 
-    public CompoundNBT write(CompoundNBT compound) {
-        super.write(compound);
+    public CompoundTag save(CompoundTag compound) {
+        super.save(compound);
         compound.putLong("Age", this.age);
 
         if (this.exitPortal != null) {
@@ -35,8 +35,8 @@ public class TileEntityDreadPortal extends TileEntity implements ITickableTileEn
         return compound;
     }
 
-    public void read(BlockState state, CompoundNBT compound) {
-        super.read(state, compound);
+    public void load(BlockState state, CompoundTag compound) {
+        super.load(state, compound);
         this.age = compound.getLong("Age");
 
         if (compound.contains("ExitPortal", 10)) {
@@ -47,7 +47,7 @@ public class TileEntityDreadPortal extends TileEntity implements ITickableTileEn
     }
 
     @OnlyIn(Dist.CLIENT)
-    public double getMaxRenderDistanceSquared() {
+    public double getViewDistance() {
         return 65536.0D;
     }
 
@@ -56,17 +56,17 @@ public class TileEntityDreadPortal extends TileEntity implements ITickableTileEn
     }
 
     @Override
-    public SUpdateTileEntityPacket getUpdatePacket() {
-        return new SUpdateTileEntityPacket(pos, 1, getUpdateTag());
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return new ClientboundBlockEntityDataPacket(worldPosition, 1, getUpdateTag());
     }
 
     @Override
-    public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket packet) {
-        read(this.getBlockState(), packet.getNbtCompound());
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
+        load(this.getBlockState(), packet.getTag());
     }
 
-    public CompoundNBT getUpdateTag() {
-        return this.write(new CompoundNBT());
+    public CompoundTag getUpdateTag() {
+        return this.save(new CompoundTag());
     }
 
     @OnlyIn(Dist.CLIENT)

@@ -13,21 +13,21 @@ import com.github.alexthe666.iceandfire.message.MessageUpdatePixieHouseModel;
 import com.github.alexthe666.iceandfire.message.MessageUpdatePixieJar;
 import com.github.alexthe666.iceandfire.misc.IafSoundRegistry;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.inventory.ItemStackHelper;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.server.SUpdateTileEntityPacket;
-import net.minecraft.tileentity.ITickableTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.Hand;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.block.entity.TickableBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.NonNullList;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 
-public class TileEntityJar extends TileEntity implements ITickableTileEntity {
+public class TileEntityJar extends BlockEntity implements TickableBlockEntity {
 
     private static final float PARTICLE_WIDTH = 0.3F;
     private static final float PARTICLE_HEIGHT = 0.6F;
@@ -56,94 +56,94 @@ public class TileEntityJar extends TileEntity implements ITickableTileEntity {
         this.hasPixie = !empty;
     }
 
-    public CompoundNBT write(CompoundNBT compound) {
-        super.write(compound);
+    public CompoundTag save(CompoundTag compound) {
+        super.save(compound);
         compound.putBoolean("HasPixie", hasPixie);
         compound.putInt("PixieType", pixieType);
         compound.putBoolean("HasProduced", hasProduced);
         compound.putBoolean("TamedPixie", tamedPixie);
         if (pixieOwnerUUID != null) {
-            compound.putUniqueId("PixieOwnerUUID", pixieOwnerUUID);
+            compound.putUUID("PixieOwnerUUID", pixieOwnerUUID);
         }
         compound.putInt("TicksExisted", ticksExisted);
-        ItemStackHelper.saveAllItems(compound, this.pixieItems);
+        ContainerHelper.saveAllItems(compound, this.pixieItems);
         return compound;
     }
 
     @Override
-    public SUpdateTileEntityPacket getUpdatePacket() {
-        return new SUpdateTileEntityPacket(pos, 1, getUpdateTag());
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return new ClientboundBlockEntityDataPacket(worldPosition, 1, getUpdateTag());
     }
 
     @Override
-    public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket packet) {
-        read(this.getBlockState(), packet.getNbtCompound());
-        if (!world.isRemote) {
-            IceAndFire.sendMSGToAll(new MessageUpdatePixieHouseModel(pos.toLong(), packet.getNbtCompound().getInt("PixieType")));
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
+        load(this.getBlockState(), packet.getTag());
+        if (!level.isClientSide) {
+            IceAndFire.sendMSGToAll(new MessageUpdatePixieHouseModel(worldPosition.asLong(), packet.getTag().getInt("PixieType")));
         }
     }
 
-    public CompoundNBT getUpdateTag() {
-        return this.write(new CompoundNBT());
+    public CompoundTag getUpdateTag() {
+        return this.save(new CompoundTag());
     }
 
-    public void read(BlockState state, CompoundNBT compound) {
+    public void load(BlockState state, CompoundTag compound) {
         hasPixie = compound.getBoolean("HasPixie");
         pixieType = compound.getInt("PixieType");
         hasProduced = compound.getBoolean("HasProduced");
         ticksExisted = compound.getInt("TicksExisted");
         tamedPixie = compound.getBoolean("TamedPixie");
-        if (compound.hasUniqueId("PixieOwnerUUID")){
-            pixieOwnerUUID = compound.getUniqueId("PixieOwnerUUID");
+        if (compound.hasUUID("PixieOwnerUUID")){
+            pixieOwnerUUID = compound.getUUID("PixieOwnerUUID");
         }
         this.pixieItems = NonNullList.withSize(1, ItemStack.EMPTY);
-        ItemStackHelper.loadAllItems(compound, pixieItems);
-        super.read(state, compound);
+        ContainerHelper.loadAllItems(compound, pixieItems);
+        super.load(state, compound);
     }
 
     @Override
     public void tick() {
         ticksExisted++;
-        if (this.world.isRemote && this.hasPixie) {
-            IceAndFire.PROXY.spawnParticle("if_pixie", this.pos.getX() + 0.5F + (double) (this.rand.nextFloat() * PARTICLE_WIDTH * 2F) - (double) PARTICLE_WIDTH, this.pos.getY() + (double) (this.rand.nextFloat() * PARTICLE_HEIGHT), this.pos.getZ() + 0.5F + (double) (this.rand.nextFloat() * PARTICLE_WIDTH * 2F) - (double) PARTICLE_WIDTH, EntityPixie.PARTICLE_RGB[this.pixieType][0], EntityPixie.PARTICLE_RGB[this.pixieType][1], EntityPixie.PARTICLE_RGB[this.pixieType][2]);
+        if (this.level.isClientSide && this.hasPixie) {
+            IceAndFire.PROXY.spawnParticle("if_pixie", this.worldPosition.getX() + 0.5F + (double) (this.rand.nextFloat() * PARTICLE_WIDTH * 2F) - (double) PARTICLE_WIDTH, this.worldPosition.getY() + (double) (this.rand.nextFloat() * PARTICLE_HEIGHT), this.worldPosition.getZ() + 0.5F + (double) (this.rand.nextFloat() * PARTICLE_WIDTH * 2F) - (double) PARTICLE_WIDTH, EntityPixie.PARTICLE_RGB[this.pixieType][0], EntityPixie.PARTICLE_RGB[this.pixieType][1], EntityPixie.PARTICLE_RGB[this.pixieType][2]);
         }
         if (ticksExisted % 24000 == 0 && !this.hasProduced && this.hasPixie) {
             this.hasProduced = true;
-            if (!this.getWorld().isRemote) {
-                IceAndFire.sendMSGToAll(new MessageUpdatePixieJar(pos.toLong(), hasProduced));
+            if (!this.getLevel().isClientSide) {
+                IceAndFire.sendMSGToAll(new MessageUpdatePixieJar(worldPosition.asLong(), hasProduced));
             }
         }
         if (this.hasPixie && hasProduced != prevHasProduced && ticksExisted > 5) {
-            if (!this.getWorld().isRemote) {
-                IceAndFire.sendMSGToAll(new MessageUpdatePixieJar(pos.toLong(), hasProduced));
+            if (!this.getLevel().isClientSide) {
+                IceAndFire.sendMSGToAll(new MessageUpdatePixieJar(worldPosition.asLong(), hasProduced));
             }else{
-                world.playSound(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5, IafSoundRegistry.PIXIE_HURT, SoundCategory.BLOCKS, 1, 1, false);
+                level.playLocalSound(worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D, worldPosition.getZ() + 0.5, IafSoundRegistry.PIXIE_HURT, SoundSource.BLOCKS, 1, 1, false);
             }
         }
         prevRotationYaw = rotationYaw;
         if (rand.nextInt(30) == 0) {
             this.rotationYaw = (rand.nextFloat() * 360F) - 180F;
         }
-        if (this.hasPixie && ticksExisted % 40 == 0 && this.rand.nextInt(6) == 0 && world.isRemote) {
-            this.world.playSound(this.pos.getX() + 0.5D, this.pos.getY() + 0.5D, this.pos.getZ() + 0.5, IafSoundRegistry.PIXIE_IDLE, SoundCategory.BLOCKS, 1, 1, false);
+        if (this.hasPixie && ticksExisted % 40 == 0 && this.rand.nextInt(6) == 0 && level.isClientSide) {
+            this.level.playLocalSound(this.worldPosition.getX() + 0.5D, this.worldPosition.getY() + 0.5D, this.worldPosition.getZ() + 0.5, IafSoundRegistry.PIXIE_IDLE, SoundSource.BLOCKS, 1, 1, false);
         }
         prevHasProduced = hasProduced;
     }
 
     public void releasePixie() {
-        EntityPixie pixie = new EntityPixie(IafEntityRegistry.PIXIE, this.world);
-        pixie.setPositionAndRotation(this.pos.getX() + 0.5F, this.pos.getY() + 1F, this.pos.getZ() + 0.5F, new Random().nextInt(360), 0);
-        pixie.setHeldItem(Hand.MAIN_HAND, pixieItems.get(0));
+        EntityPixie pixie = new EntityPixie(IafEntityRegistry.PIXIE, this.level);
+        pixie.absMoveTo(this.worldPosition.getX() + 0.5F, this.worldPosition.getY() + 1F, this.worldPosition.getZ() + 0.5F, new Random().nextInt(360), 0);
+        pixie.setItemInHand(InteractionHand.MAIN_HAND, pixieItems.get(0));
         pixie.setColor(this.pixieType);
-        world.addEntity(pixie);
+        level.addFreshEntity(pixie);
         this.hasPixie = false;
         this.pixieType = 0;
         pixie.ticksUntilHouseAI = 500;
-        pixie.setTamed(this.tamedPixie);
-        pixie.setOwnerId(this.pixieOwnerUUID);
+        pixie.setTame(this.tamedPixie);
+        pixie.setOwnerUUID(this.pixieOwnerUUID);
 
-        if (!world.isRemote) {
-            IceAndFire.sendMSGToAll(new MessageUpdatePixieHouse(pos.toLong(), false, 0));
+        if (!level.isClientSide) {
+            IceAndFire.sendMSGToAll(new MessageUpdatePixieHouse(worldPosition.asLong(), false, 0));
         }
     }
 
@@ -155,7 +155,7 @@ public class TileEntityJar extends TileEntity implements ITickableTileEntity {
     }
 
     private float updateRotation(float float1, float float2, float float3) {
-        float f = MathHelper.wrapDegrees(float2 - float1);
+        float f = Mth.wrapDegrees(float2 - float1);
 
         if (f > float3) {
             f = float3;

@@ -4,18 +4,18 @@ import java.util.Random;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.item.Item;
-import net.minecraft.state.BooleanProperty;
-import net.minecraft.state.StateContainer;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.ToolType;
 
-import net.minecraft.block.AbstractBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public class BlockReturningState extends Block {
     public static final BooleanProperty REVERTS = BooleanProperty.create("revert");
@@ -24,39 +24,39 @@ public class BlockReturningState extends Block {
 
     public BlockReturningState(Material materialIn, String name, String toolUsed, int toolStrength, float hardness, float resistance, SoundType sound, BlockState returnToState) {
         super(
-    		AbstractBlock.Properties
-    			.create(materialIn)
+    		BlockBehaviour.Properties
+    			.of(materialIn)
     			.sound(sound)
-    			.hardnessAndResistance(hardness, resistance)
+    			.strength(hardness, resistance)
     			.harvestTool(ToolType.get(toolUsed))
     			.harvestLevel(toolStrength)
-    			.tickRandomly()
+    			.randomTicks()
 		);
 
         setRegistryName(IceAndFire.MODID, name);
         this.returnState = returnToState;
-        this.setDefaultState(this.stateContainer.getBaseState().with(REVERTS, Boolean.valueOf(false)));
+        this.registerDefaultState(this.stateDefinition.any().setValue(REVERTS, Boolean.valueOf(false)));
     }
 
     @SuppressWarnings("deprecation")
     public BlockReturningState(Material materialIn, String name, String toolUsed, int toolStrength, float hardness, float resistance, SoundType sound, boolean slippery, BlockState returnToState) {
-        super(AbstractBlock.Properties.create(materialIn).sound(sound).hardnessAndResistance(hardness, resistance).harvestTool(ToolType.get(toolUsed)).harvestLevel(toolStrength).slipperiness(0.98F).tickRandomly());
+        super(BlockBehaviour.Properties.of(materialIn).sound(sound).strength(hardness, resistance).harvestTool(ToolType.get(toolUsed)).harvestLevel(toolStrength).friction(0.98F).randomTicks());
         setRegistryName(IceAndFire.MODID, name);
         this.returnState = returnToState;
-        this.setDefaultState(this.stateContainer.getBaseState().with(REVERTS, Boolean.valueOf(false)));
+        this.registerDefaultState(this.stateDefinition.any().setValue(REVERTS, Boolean.valueOf(false)));
     }
 
-    public void tick(BlockState state, ServerWorld worldIn, BlockPos pos, Random rand) {
-        if (!worldIn.isRemote) {
+    public void tick(BlockState state, ServerLevel worldIn, BlockPos pos, Random rand) {
+        if (!worldIn.isClientSide) {
             if (!worldIn.isAreaLoaded(pos, 3))
                 return;
-            if (state.get(REVERTS) && rand.nextInt(3) == 0) {
-                worldIn.setBlockState(pos, returnState);
+            if (state.getValue(REVERTS) && rand.nextInt(3) == 0) {
+                worldIn.setBlockAndUpdate(pos, returnState);
             }
         }
     }
 
-    protected void fillStateContainer(StateContainer.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(REVERTS);
     }
 }

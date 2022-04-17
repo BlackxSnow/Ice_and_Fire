@@ -7,17 +7,17 @@ import javax.annotation.Nullable;
 
 import com.github.alexthe666.iceandfire.entity.EntityTroll;
 
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.Level;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class TrollAIFleeSun extends Goal {
     private final EntityTroll troll;
     private final double movementSpeed;
-    private final World world;
+    private final Level world;
     private double shelterX;
     private double shelterY;
     private double shelterZ;
@@ -25,17 +25,17 @@ public class TrollAIFleeSun extends Goal {
     public TrollAIFleeSun(EntityTroll theCreatureIn, double movementSpeedIn) {
         this.troll = theCreatureIn;
         this.movementSpeed = movementSpeedIn;
-        this.world = theCreatureIn.world;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.world = theCreatureIn.level;
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
-    public boolean shouldExecute() {
-        if (!this.world.isDaytime()) {
+    public boolean canUse() {
+        if (!this.world.isDay()) {
             return false;
-        } else if (!this.world.canSeeSky(new BlockPos(this.troll.getPosX(), this.troll.getBoundingBox().minY, this.troll.getPosZ()))) {
+        } else if (!this.world.canSeeSky(new BlockPos(this.troll.getX(), this.troll.getBoundingBox().minY, this.troll.getZ()))) {
             return false;
         } else {
-            Vector3d Vector3d = this.findPossibleShelter();
+            Vec3 Vector3d = this.findPossibleShelter();
 
             if (Vector3d == null) {
                 return false;
@@ -51,27 +51,27 @@ public class TrollAIFleeSun extends Goal {
     /**
      * Returns whether an in-progress Goal should continue executing
      */
-    public boolean shouldContinueExecuting() {
-        return !this.troll.getNavigator().noPath();
+    public boolean canContinueToUse() {
+        return !this.troll.getNavigation().isDone();
     }
 
     /**
      * Execute a one shot task or start executing a continuous task
      */
-    public void startExecuting() {
-        this.troll.getNavigator().tryMoveToXYZ(this.shelterX, this.shelterY, this.shelterZ, this.movementSpeed);
+    public void start() {
+        this.troll.getNavigation().moveTo(this.shelterX, this.shelterY, this.shelterZ, this.movementSpeed);
     }
 
     @Nullable
-    private Vector3d findPossibleShelter() {
-        Random random = this.troll.getRNG();
-        BlockPos blockpos = new BlockPos(this.troll.getPosX(), this.troll.getBoundingBox().minY, this.troll.getPosZ());
+    private Vec3 findPossibleShelter() {
+        Random random = this.troll.getRandom();
+        BlockPos blockpos = new BlockPos(this.troll.getX(), this.troll.getBoundingBox().minY, this.troll.getZ());
 
         for (int i = 0; i < 10; ++i) {
-            BlockPos blockpos1 = blockpos.add(random.nextInt(20) - 10, random.nextInt(6) - 3, random.nextInt(20) - 10);
+            BlockPos blockpos1 = blockpos.offset(random.nextInt(20) - 10, random.nextInt(6) - 3, random.nextInt(20) - 10);
 
-            if (!this.world.canSeeSky(blockpos1) && this.troll.getBlockPathWeight(blockpos1) < 0.0F) {
-                return new Vector3d(blockpos1.getX(), blockpos1.getY(), blockpos1.getZ());
+            if (!this.world.canSeeSky(blockpos1) && this.troll.getWalkTargetValue(blockpos1) < 0.0F) {
+                return new Vec3(blockpos1.getX(), blockpos1.getY(), blockpos1.getZ());
             }
         }
 

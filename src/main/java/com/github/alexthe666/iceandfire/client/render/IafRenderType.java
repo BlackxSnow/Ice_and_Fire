@@ -4,22 +4,22 @@ import com.github.alexthe666.iceandfire.client.render.tile.RenderDreadPortal;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 
-import net.minecraft.client.renderer.RenderState;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.client.renderer.vertex.VertexFormat;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Util;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.Util;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import net.minecraft.client.renderer.RenderState.TextureState;
+import net.minecraft.client.renderer.RenderStateShard.TextureStateShard;
 
 public class IafRenderType extends RenderType {
 
     private static final ResourceLocation STONE_TEXTURE = new ResourceLocation("textures/block/stone.png");
 
-    protected static final RenderState.TransparencyState GHOST_TRANSPARANCY = new RenderState.TransparencyState("translucent_ghost_transparency", () -> {
+    protected static final RenderStateShard.TransparencyStateShard GHOST_TRANSPARANCY = new RenderStateShard.TransparencyStateShard("translucent_ghost_transparency", () -> {
         RenderSystem.enableBlend();
         RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
     }, () -> {
@@ -32,43 +32,43 @@ public class IafRenderType extends RenderType {
     }
 
     public static RenderType getGhost(ResourceLocation locationIn) {
-        TextureState lvt_1_1_ = new TextureState(locationIn, false, false);
-        return makeType("ghost_iaf", DefaultVertexFormats.ENTITY, 7, 262144, false, true, RenderType.State.getBuilder().texture(lvt_1_1_).writeMask(COLOR_DEPTH_WRITE).depthTest(DEPTH_LEQUAL).alpha(DEFAULT_ALPHA).diffuseLighting(DIFFUSE_LIGHTING_ENABLED).lightmap(LIGHTMAP_DISABLED).overlay(OVERLAY_ENABLED).transparency(GHOST_TRANSPARANCY).fog(FOG).cull(RenderState.CULL_ENABLED).build(true));
+        TextureStateShard lvt_1_1_ = new TextureStateShard(locationIn, false, false);
+        return create("ghost_iaf", DefaultVertexFormat.NEW_ENTITY, 7, 262144, false, true, RenderType.CompositeState.builder().setTextureState(lvt_1_1_).setWriteMaskState(COLOR_DEPTH_WRITE).setDepthTestState(LEQUAL_DEPTH_TEST).setAlphaState(DEFAULT_ALPHA).setDiffuseLightingState(DIFFUSE_LIGHTING).setLightmapState(NO_LIGHTMAP).setOverlayState(OVERLAY).setTransparencyState(GHOST_TRANSPARANCY).setFogState(FOG).setCullState(RenderStateShard.CULL).createCompositeState(true));
     }
 
     public static RenderType getGhostDaytime(ResourceLocation locationIn) {
-        TextureState lvt_1_1_ = new TextureState(locationIn, false, false);
-        return makeType("ghost_iaf_day", DefaultVertexFormats.ENTITY, 7, 262144, false, true, RenderType.State.getBuilder().texture(lvt_1_1_).writeMask(COLOR_DEPTH_WRITE).depthTest(DEPTH_LEQUAL).alpha(DEFAULT_ALPHA).diffuseLighting(DIFFUSE_LIGHTING_ENABLED).lightmap(LIGHTMAP_DISABLED).overlay(OVERLAY_ENABLED).transparency(TRANSLUCENT_TRANSPARENCY).fog(FOG).cull(RenderState.CULL_ENABLED).build(true));
+        TextureStateShard lvt_1_1_ = new TextureStateShard(locationIn, false, false);
+        return create("ghost_iaf_day", DefaultVertexFormat.NEW_ENTITY, 7, 262144, false, true, RenderType.CompositeState.builder().setTextureState(lvt_1_1_).setWriteMaskState(COLOR_DEPTH_WRITE).setDepthTestState(LEQUAL_DEPTH_TEST).setAlphaState(DEFAULT_ALPHA).setDiffuseLightingState(DIFFUSE_LIGHTING).setLightmapState(NO_LIGHTMAP).setOverlayState(OVERLAY).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setFogState(FOG).setCullState(RenderStateShard.CULL).createCompositeState(true));
     }
 
     public static RenderType getDreadlandsRenderType(int iterationIn) {
-        RenderState.TransparencyState renderstate$transparencystate;
-        RenderState.TextureState renderstate$texturestate;
+        RenderStateShard.TransparencyStateShard renderstate$transparencystate;
+        RenderStateShard.TextureStateShard renderstate$texturestate;
         if (iterationIn <= 1) {
             renderstate$transparencystate = TRANSLUCENT_TRANSPARENCY;
-            renderstate$texturestate = new RenderState.TextureState(RenderDreadPortal.END_SKY_TEXTURE, false, false);
+            renderstate$texturestate = new RenderStateShard.TextureStateShard(RenderDreadPortal.END_SKY_TEXTURE, false, false);
         } else {
             renderstate$transparencystate = ADDITIVE_TRANSPARENCY;
-            renderstate$texturestate = new RenderState.TextureState(RenderDreadPortal.END_PORTAL_TEXTURE, false, false);
+            renderstate$texturestate = new RenderStateShard.TextureStateShard(RenderDreadPortal.END_PORTAL_TEXTURE, false, false);
         }
 
-        return makeType("dreadlands_portal", DefaultVertexFormats.POSITION_COLOR, 7, 256, false, true, RenderType.State.getBuilder().transparency(renderstate$transparencystate).texture(renderstate$texturestate).texturing(new DreadlandsPortalTexturingState(iterationIn)).build(false));
+        return create("dreadlands_portal", DefaultVertexFormat.POSITION_COLOR, 7, 256, false, true, RenderType.CompositeState.builder().setTransparencyState(renderstate$transparencystate).setTextureState(renderstate$texturestate).setTexturingState(new DreadlandsPortalTexturingState(iterationIn)).createCompositeState(false));
     }
 
     public static RenderType getStoneMobRenderType(float xSize, float ySize) {
-        RenderState.TextureState textureState = new RenderState.TextureState(STONE_TEXTURE, false, false);
-        RenderType.State rendertype$state = RenderType.State.getBuilder().texture(textureState).texturing(new StoneTexturingState(STONE_TEXTURE, xSize, ySize)).transparency(NO_TRANSPARENCY).diffuseLighting(DIFFUSE_LIGHTING_ENABLED).alpha(DEFAULT_ALPHA).lightmap(LIGHTMAP_ENABLED).overlay(OVERLAY_ENABLED).build(true);
-        return makeType("stone_entity_type", DefaultVertexFormats.ENTITY, 7, 256, rendertype$state);
+        RenderStateShard.TextureStateShard textureState = new RenderStateShard.TextureStateShard(STONE_TEXTURE, false, false);
+        RenderType.CompositeState rendertype$state = RenderType.CompositeState.builder().setTextureState(textureState).setTexturingState(new StoneTexturingState(STONE_TEXTURE, xSize, ySize)).setTransparencyState(NO_TRANSPARENCY).setDiffuseLightingState(DIFFUSE_LIGHTING).setAlphaState(DEFAULT_ALPHA).setLightmapState(LIGHTMAP).setOverlayState(OVERLAY).createCompositeState(true);
+        return create("stone_entity_type", DefaultVertexFormat.NEW_ENTITY, 7, 256, rendertype$state);
     }
 
     public static RenderType getStoneCrackRenderType(ResourceLocation crackTex, float xSize, float ySize) {
-        RenderState.TextureState renderstate$texturestate = new RenderState.TextureState(crackTex, false, false);
-        RenderType.State rendertype$state = RenderType.State.getBuilder().texture(renderstate$texturestate).texturing(new StoneTexturingState(crackTex, xSize, ySize)).diffuseLighting(DIFFUSE_LIGHTING_ENABLED).alpha(RenderState.HALF_ALPHA).transparency(TRANSLUCENT_TRANSPARENCY).depthTest(DEPTH_EQUAL).cull(CULL_DISABLED).lightmap(LIGHTMAP_ENABLED).overlay(OVERLAY_ENABLED).build(false);
-        return makeType("stone_entity_type_crack", DefaultVertexFormats.ENTITY, 7, 256, rendertype$state);
+        RenderStateShard.TextureStateShard renderstate$texturestate = new RenderStateShard.TextureStateShard(crackTex, false, false);
+        RenderType.CompositeState rendertype$state = RenderType.CompositeState.builder().setTextureState(renderstate$texturestate).setTexturingState(new StoneTexturingState(crackTex, xSize, ySize)).setDiffuseLightingState(DIFFUSE_LIGHTING).setAlphaState(RenderStateShard.MIDWAY_ALPHA).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setDepthTestState(EQUAL_DEPTH_TEST).setCullState(NO_CULL).setLightmapState(LIGHTMAP).setOverlayState(OVERLAY).createCompositeState(false);
+        return create("stone_entity_type_crack", DefaultVertexFormat.NEW_ENTITY, 7, 256, rendertype$state);
     }
 
     @OnlyIn(Dist.CLIENT)
-    public static final class StoneTexturingState extends RenderState.TexturingState {
+    public static final class StoneTexturingState extends RenderStateShard.TexturingStateShard {
         private final float xSize;
         private final float ySize;
 
@@ -104,7 +104,7 @@ public class IafRenderType extends RenderType {
     }
 
     @OnlyIn(Dist.CLIENT)
-    public static final class DreadlandsPortalTexturingState extends RenderState.TexturingState {
+    public static final class DreadlandsPortalTexturingState extends RenderStateShard.TexturingStateShard {
         private final int iteration;
 
         public DreadlandsPortalTexturingState(int iteration) {
@@ -114,7 +114,7 @@ public class IafRenderType extends RenderType {
                 RenderSystem.loadIdentity();
                 RenderSystem.translatef(0.5F, 0.5F, 0.0F);
                 RenderSystem.scalef(0.5F, -0.5F, 1.0F);
-                float yDist = iteration  <= 1 ? 1 : ((float) (Util.milliTime() % 80000L) / 80000.0F);
+                float yDist = iteration  <= 1 ? 1 : ((float) (Util.getMillis() % 80000L) / 80000.0F);
                 RenderSystem.translatef(17.0F / (float) iteration, (2.0F + (float) iteration / 0.5F) * yDist, 0.0F);
                 RenderSystem.mulTextureByProjModelView();
                 RenderSystem.matrixMode(5888);

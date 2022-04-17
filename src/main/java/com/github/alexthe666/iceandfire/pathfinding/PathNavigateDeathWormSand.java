@@ -2,78 +2,78 @@ package com.github.alexthe666.iceandfire.pathfinding;
 
 import com.github.alexthe666.iceandfire.entity.EntityDeathWorm;
 
-import net.minecraft.block.material.Material;
-import net.minecraft.pathfinding.PathFinder;
-import net.minecraft.pathfinding.PathNavigator;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.RayTraceContext;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.World;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.pathfinder.PathFinder;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.Level;
 
-public class PathNavigateDeathWormSand extends PathNavigator {
+public class PathNavigateDeathWormSand extends PathNavigation {
     private EntityDeathWorm worm;
 
-    public PathNavigateDeathWormSand(EntityDeathWorm deathworm, World worldIn) {
+    public PathNavigateDeathWormSand(EntityDeathWorm deathworm, Level worldIn) {
         super(deathworm, worldIn);
         worm = deathworm;
     }
 
-    public boolean getCanSwim() {
-        return this.nodeProcessor.getCanSwim();
+    public boolean canFloat() {
+        return this.nodeEvaluator.canFloat();
     }
 
-    protected PathFinder getPathFinder(int i) {
-        this.nodeProcessor = new NodeProcessorDeathWorm();
-        this.nodeProcessor.setCanEnterDoors(true);
-        this.nodeProcessor.setCanSwim(true);
-        return new PathFinder(this.nodeProcessor, i);
+    protected PathFinder createPathFinder(int i) {
+        this.nodeEvaluator = new NodeProcessorDeathWorm();
+        this.nodeEvaluator.setCanPassDoors(true);
+        this.nodeEvaluator.setCanFloat(true);
+        return new PathFinder(this.nodeEvaluator, i);
     }
 
     /**
      * If on ground or swimming and can swim
      */
-    protected boolean canNavigate() {
+    protected boolean canUpdatePath() {
         return worm.isInSand();
     }
 
-    protected Vector3d getEntityPosition() {
-        return new Vector3d(this.entity.getPosX(), this.entity.getPosY() + 0.5D, this.entity.getPosZ());
+    protected Vec3 getTempMobPos() {
+        return new Vec3(this.mob.getX(), this.mob.getY() + 0.5D, this.mob.getZ());
     }
 
-    protected void pathFollow() {
-        Vector3d Vector3d = this.getEntityPosition();
+    protected void followThePath() {
+        Vec3 Vector3d = this.getTempMobPos();
         float f = 0.65F;
         int i = 6;
 
-        if (Vector3d.squareDistanceTo(this.currentPath.getVectorFromIndex(this.entity, this.currentPath.getCurrentPathIndex())) < (double) f) {
-            this.currentPath.incrementPathIndex();
+        if (Vector3d.distanceToSqr(this.path.getEntityPosAtNode(this.mob, this.path.getNextNodeIndex())) < (double) f) {
+            this.path.advance();
         }
 
-        for (int j = Math.min(this.currentPath.getCurrentPathIndex() + 6, this.currentPath.getCurrentPathLength() - 1); j > this.currentPath.getCurrentPathIndex(); --j) {
-            Vector3d Vector3d1 = this.currentPath.getVectorFromIndex(this.entity, j);
+        for (int j = Math.min(this.path.getNextNodeIndex() + 6, this.path.getNodeCount() - 1); j > this.path.getNextNodeIndex(); --j) {
+            Vec3 Vector3d1 = this.path.getEntityPosAtNode(this.mob, j);
 
-            if (Vector3d1.squareDistanceTo(Vector3d) <= 36.0D && this.isDirectPathBetweenPoints(Vector3d, Vector3d1, 0, 0, 0)) {
-                this.currentPath.setCurrentPathIndex(j);
+            if (Vector3d1.distanceToSqr(Vector3d) <= 36.0D && this.canMoveDirectly(Vector3d, Vector3d1, 0, 0, 0)) {
+                this.path.setNextNodeIndex(j);
                 break;
             }
         }
 
-        this.checkForStuck(Vector3d);
+        this.doStuckDetection(Vector3d);
     }
 
     /**
      * Checks if the specified entity can safely walk to the specified location.
      */
-    protected boolean isDirectPathBetweenPoints(Vector3d posVec31, Vector3d posVec32, int sizeX, int sizeY, int sizeZ) {
-        RayTraceResult raytraceresult = this.world.rayTraceBlocks(new RayTraceContext(posVec31, posVec32, RayTraceContext.BlockMode.COLLIDER, RayTraceContext.FluidMode.NONE, entity));
-        if (raytraceresult != null && raytraceresult.getType() == RayTraceResult.Type.BLOCK) {
-            return entity.world.getBlockState(new BlockPos(raytraceresult.getHitVec())).getMaterial() == Material.SAND;
+    protected boolean canMoveDirectly(Vec3 posVec31, Vec3 posVec32, int sizeX, int sizeY, int sizeZ) {
+        HitResult raytraceresult = this.level.clip(new ClipContext(posVec31, posVec32, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mob));
+        if (raytraceresult != null && raytraceresult.getType() == HitResult.Type.BLOCK) {
+            return mob.level.getBlockState(new BlockPos(raytraceresult.getLocation())).getMaterial() == Material.SAND;
         }
         return false;
     }
 
-    public boolean canEntityStandOnPos(BlockPos pos) {
-        return this.world.getBlockState(pos).isSolid();
+    public boolean isStableDestination(BlockPos pos) {
+        return this.level.getBlockState(pos).canOcclude();
     }
 }

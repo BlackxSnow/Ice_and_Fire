@@ -5,51 +5,51 @@ import java.util.Random;
 import com.github.alexthe666.iceandfire.entity.EntityGhost;
 import com.github.alexthe666.iceandfire.entity.IafEntityRegistry;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.tileentity.ChestTileEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.server.level.ServerLevel;
 
-public class TileEntityGhostChest extends ChestTileEntity {
+public class TileEntityGhostChest extends ChestBlockEntity {
 
     public TileEntityGhostChest() {
         super(IafTileEntityRegistry.GHOST_CHEST);
     }
 
-    public void read(BlockState state, CompoundNBT nbt) {
-        super.read(state, nbt);
+    public void load(BlockState state, CompoundTag nbt) {
+        super.load(state, nbt);
     }
 
-    public CompoundNBT write(CompoundNBT compound) {
-        super.write(compound);
+    public CompoundTag save(CompoundTag compound) {
+        super.save(compound);
         return compound;
     }
-    public void openInventory(PlayerEntity player) {
-        super.openInventory(player);
-        if(this.world.getDifficulty() != Difficulty.PEACEFUL){
-            EntityGhost ghost = IafEntityRegistry.GHOST.create(world);
+    public void startOpen(Player player) {
+        super.startOpen(player);
+        if(this.level.getDifficulty() != Difficulty.PEACEFUL){
+            EntityGhost ghost = IafEntityRegistry.GHOST.create(level);
             Random random = new Random();
-            ghost.setPositionAndRotation(this.pos.getX() + 0.5F, this.pos.getY() + 0.5F, this.pos.getZ() + 0.5F, random.nextFloat() * 360F, 0);
-            if(!this.world.isRemote){
-                ghost.onInitialSpawn((ServerWorld)world, world.getDifficultyForLocation(this.pos), SpawnReason.SPAWNER, null, null);
+            ghost.absMoveTo(this.worldPosition.getX() + 0.5F, this.worldPosition.getY() + 0.5F, this.worldPosition.getZ() + 0.5F, random.nextFloat() * 360F, 0);
+            if(!this.level.isClientSide){
+                ghost.finalizeSpawn((ServerLevel)level, level.getCurrentDifficultyAt(this.worldPosition), MobSpawnType.SPAWNER, null, null);
                 if(!player.isCreative()){
-                    ghost.setAttackTarget(player);
+                    ghost.setTarget(player);
                 }
-                ghost.enablePersistence();
-                world.addEntity(ghost);
+                ghost.setPersistenceRequired();
+                level.addFreshEntity(ghost);
             }
             ghost.setAnimation(EntityGhost.ANIMATION_SCARE);
-            ghost.setHomePosAndDistance(this.pos, 4);
+            ghost.restrictTo(this.worldPosition, 4);
             ghost.setFromChest(true);
         }
     }
 
-    protected void onOpenOrClose() {
-        super.onOpenOrClose();
-        this.world.notifyNeighborsOfStateChange(this.pos.down(), this.getBlockState().getBlock());
+    protected void signalOpenCount() {
+        super.signalOpenCount();
+        this.level.updateNeighborsAt(this.worldPosition.below(), this.getBlockState().getBlock());
 
     }
 }

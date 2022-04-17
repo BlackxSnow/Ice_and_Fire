@@ -8,31 +8,31 @@ import com.github.alexthe666.iceandfire.item.ItemDragonEgg;
 import com.github.alexthe666.iceandfire.item.ItemMyrmexEgg;
 import com.github.alexthe666.iceandfire.message.MessageUpdatePodium;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.ISidedInventory;
-import net.minecraft.inventory.ItemStackHelper;
-import net.minecraft.inventory.container.Container;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.server.SUpdateTileEntityPacket;
-import net.minecraft.tileentity.ITickableTileEntity;
-import net.minecraft.tileentity.LockableTileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.IntArray;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.WorldlyContainer;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.block.entity.TickableBlockEntity;
+import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
+import net.minecraft.core.Direction;
+import net.minecraft.world.inventory.SimpleContainerData;
+import net.minecraft.core.NonNullList;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-public class TileEntityPodium extends LockableTileEntity implements ITickableTileEntity, ISidedInventory {
+public class TileEntityPodium extends BaseContainerBlockEntity implements TickableBlockEntity, WorldlyContainer {
     private static final int[] slotsTop = new int[]{0};
     public int ticksExisted;
     public int prevTicksExisted;
-    net.minecraftforge.items.IItemHandler handlerUp = new net.minecraftforge.items.wrapper.SidedInvWrapper(this, net.minecraft.util.Direction.UP);
+    net.minecraftforge.items.IItemHandler handlerUp = new net.minecraftforge.items.wrapper.SidedInvWrapper(this, net.minecraft.core.Direction.UP);
     net.minecraftforge.items.IItemHandler handlerDown = new net.minecraftforge.items.wrapper.SidedInvWrapper(this, Direction.DOWN);
     net.minecraftforge.common.util.LazyOptional<? extends net.minecraftforge.items.IItemHandler>[] handlers =
             net.minecraftforge.items.wrapper.SidedInvWrapper.create(this, Direction.UP, Direction.DOWN);
@@ -49,22 +49,22 @@ public class TileEntityPodium extends LockableTileEntity implements ITickableTil
     }
 
     @OnlyIn(Dist.CLIENT)
-    public net.minecraft.util.math.AxisAlignedBB getRenderBoundingBox() {
-        return new net.minecraft.util.math.AxisAlignedBB(pos, pos.add(1, 3, 1));
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        return new net.minecraft.world.phys.AABB(worldPosition, worldPosition.offset(1, 3, 1));
     }
 
     @Override
-    public int getSizeInventory() {
+    public int getContainerSize() {
         return this.stacks.size();
     }
 
     @Override
-    public ItemStack getStackInSlot(int index) {
+    public ItemStack getItem(int index) {
         return this.stacks.get(index);
     }
 
     @Override
-    public ItemStack decrStackSize(int index, int count) {
+    public ItemStack removeItem(int index, int count) {
         if (!this.stacks.get(index).isEmpty()) {
             ItemStack itemstack;
 
@@ -97,58 +97,58 @@ public class TileEntityPodium extends LockableTileEntity implements ITickableTil
     }
 
     @Override
-    public void setInventorySlotContents(int index, ItemStack stack) {
-        boolean flag = !stack.isEmpty() && stack.isItemEqual(this.stacks.get(index)) && ItemStack.areItemStackTagsEqual(stack, this.stacks.get(index));
+    public void setItem(int index, ItemStack stack) {
+        boolean flag = !stack.isEmpty() && stack.sameItem(this.stacks.get(index)) && ItemStack.tagMatches(stack, this.stacks.get(index));
         this.stacks.set(index, stack);
 
-        if (!stack.isEmpty() && stack.getCount() > this.getInventoryStackLimit()) {
-            stack.setCount(this.getInventoryStackLimit());
+        if (!stack.isEmpty() && stack.getCount() > this.getMaxStackSize()) {
+            stack.setCount(this.getMaxStackSize());
         }
-        this.write(this.getUpdateTag());
-        if(!world.isRemote){
-            IceAndFire.sendMSGToAll(new MessageUpdatePodium(this.getPos().toLong(), stacks.get(0)));
+        this.save(this.getUpdateTag());
+        if(!level.isClientSide){
+            IceAndFire.sendMSGToAll(new MessageUpdatePodium(this.getBlockPos().asLong(), stacks.get(0)));
         }
     }
 
     @Override
-    public void read(BlockState state, CompoundNBT compound) {
-        super.read(state, compound);
-        this.stacks = NonNullList.withSize(this.getSizeInventory(), ItemStack.EMPTY);
-        ItemStackHelper.loadAllItems(compound, this.stacks);
+    public void load(BlockState state, CompoundTag compound) {
+        super.load(state, compound);
+        this.stacks = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
+        ContainerHelper.loadAllItems(compound, this.stacks);
     }
 
     @Override
-    public CompoundNBT write(CompoundNBT compound) {
-        super.write(compound);
-        ItemStackHelper.saveAllItems(compound, this.stacks);
+    public CompoundTag save(CompoundTag compound) {
+        super.save(compound);
+        ContainerHelper.saveAllItems(compound, this.stacks);
         return compound;
     }
 
     @Override
-    public void openInventory(PlayerEntity player) {
+    public void startOpen(Player player) {
     }
 
     @Override
-    public void closeInventory(PlayerEntity player) {
+    public void stopOpen(Player player) {
     }
 
     @Override
-    public boolean canInsertItem(int index, ItemStack stack, Direction direction) {
+    public boolean canPlaceItemThroughFace(int index, ItemStack stack, Direction direction) {
         return index != 0 || (stack.getItem() instanceof ItemDragonEgg || stack.getItem() instanceof ItemMyrmexEgg);
     }
 
     @Override
-    public int getInventoryStackLimit() {
+    public int getMaxStackSize() {
         return 64;
     }
 
     @Override
-    public boolean isUsableByPlayer(PlayerEntity player) {
+    public boolean stillValid(Player player) {
         return true;
     }
 
     @Override
-    public void clear() {
+    public void clearContent() {
         this.stacks.clear();
     }
 
@@ -158,7 +158,7 @@ public class TileEntityPodium extends LockableTileEntity implements ITickableTil
     }
 
     @Override
-    public boolean canExtractItem(int index, ItemStack stack, Direction direction) {
+    public boolean canTakeItemThroughFace(int index, ItemStack stack, Direction direction) {
         return false;
     }
 
@@ -168,48 +168,48 @@ public class TileEntityPodium extends LockableTileEntity implements ITickableTil
     }
 
     @Override
-    public boolean isItemValidForSlot(int index, ItemStack stack) {
+    public boolean canPlaceItem(int index, ItemStack stack) {
         return false;
     }
 
     @Override
-    public SUpdateTileEntityPacket getUpdatePacket() {
-        return new SUpdateTileEntityPacket(pos, -1, getUpdateTag());
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return new ClientboundBlockEntityDataPacket(worldPosition, -1, getUpdateTag());
     }
 
     @Override
-    public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket packet) {
-        read(this.getBlockState(), packet.getNbtCompound());
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
+        load(this.getBlockState(), packet.getTag());
     }
 
-    public CompoundNBT getUpdateTag() {
-        return this.write(new CompoundNBT());
+    public CompoundTag getUpdateTag() {
+        return this.save(new CompoundTag());
     }
 
     @Override
-    public ItemStack removeStackFromSlot(int index) {
+    public ItemStack removeItemNoUpdate(int index) {
         return ItemStack.EMPTY;
     }
 
     @Override
-    public ITextComponent getDisplayName() {
+    public Component getDisplayName() {
         return getDefaultName();
     }
 
     @Override
-    protected ITextComponent getDefaultName() {
-        return new TranslationTextComponent("block.iceandfire.podium");
+    protected Component getDefaultName() {
+        return new TranslatableComponent("block.iceandfire.podium");
     }
 
     @Override
-    protected Container createMenu(int id, PlayerInventory player) {
+    protected AbstractContainerMenu createMenu(int id, Inventory player) {
         return null;
     }
 
     @Override
     public boolean isEmpty() {
-        for (int i = 0; i < this.getSizeInventory(); i++) {
-            if (!this.getStackInSlot(i).isEmpty()) {
+        for (int i = 0; i < this.getContainerSize(); i++) {
+            if (!this.getItem(i).isEmpty()) {
                 return false;
             }
         }
@@ -218,7 +218,7 @@ public class TileEntityPodium extends LockableTileEntity implements ITickableTil
 
     @Override
     public <T> net.minecraftforge.common.util.LazyOptional<T> getCapability(net.minecraftforge.common.capabilities.Capability<T> capability, @Nullable Direction facing) {
-        if (!this.removed && facing != null && capability == net.minecraftforge.items.CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
+        if (!this.remove && facing != null && capability == net.minecraftforge.items.CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
             if (facing == Direction.DOWN)
                 return handlers[1].cast();
             else
@@ -229,7 +229,7 @@ public class TileEntityPodium extends LockableTileEntity implements ITickableTil
 
     @Nullable
     @Override
-    public Container createMenu(int id, PlayerInventory playerInventory, PlayerEntity player) {
-        return new ContainerPodium(id, this, playerInventory, new IntArray(0));
+    public AbstractContainerMenu createMenu(int id, Inventory playerInventory, Player player) {
+        return new ContainerPodium(id, this, playerInventory, new SimpleContainerData(0));
     }
 }

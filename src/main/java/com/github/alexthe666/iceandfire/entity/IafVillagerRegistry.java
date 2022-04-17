@@ -10,20 +10,20 @@ import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.merchant.villager.VillagerProfession;
-import net.minecraft.entity.merchant.villager.VillagerTrades;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.MerchantOffer;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.registry.WorldGenRegistries;
-import net.minecraft.village.PointOfInterestType;
-import net.minecraft.world.gen.feature.jigsaw.JigsawPattern;
-import net.minecraft.world.gen.feature.jigsaw.JigsawPatternRegistry;
-import net.minecraft.world.gen.feature.jigsaw.JigsawPiece;
-import net.minecraft.world.gen.feature.jigsaw.LegacySingleJigsawPiece;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.entity.npc.VillagerTrades;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.data.BuiltinRegistries;
+import net.minecraft.world.entity.ai.village.poi.PoiType;
+import net.minecraft.world.level.levelgen.feature.structures.StructureTemplatePool;
+import net.minecraft.data.worldgen.Pools;
+import net.minecraft.world.level.levelgen.feature.structures.StructurePoolElement;
+import net.minecraft.world.level.levelgen.feature.structures.LegacySinglePoolElement;
 import net.minecraft.world.gen.feature.structure.*;
 import net.minecraft.world.gen.feature.template.*;
 import net.minecraftforge.event.RegistryEvent;
@@ -34,26 +34,38 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import net.minecraft.data.worldgen.DesertVillagePools;
+import net.minecraft.data.worldgen.PlainVillagePools;
+import net.minecraft.data.worldgen.ProcessorLists;
+import net.minecraft.data.worldgen.SavannaVillagePools;
+import net.minecraft.data.worldgen.SnowyVillagePools;
+import net.minecraft.data.worldgen.TaigaVillagePools;
+import net.minecraft.world.level.levelgen.structure.templatesystem.AlwaysTrueTest;
+import net.minecraft.world.level.levelgen.structure.templatesystem.ProcessorRule;
+import net.minecraft.world.level.levelgen.structure.templatesystem.RandomBlockMatchTest;
+import net.minecraft.world.level.levelgen.structure.templatesystem.RuleProcessor;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorList;
+
 @Mod.EventBusSubscriber(modid = IceAndFire.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class IafVillagerRegistry {
 
     private static final String[] VILLAGE_TYPES = new String[]{"plains", "desert", "snowy", "savanna", "taiga"};
-    private static final StructureProcessorList HOUSE_PROCESSOR = WorldGenRegistries.register(WorldGenRegistries.STRUCTURE_PROCESSOR_LIST, new ResourceLocation("iceandfire:village_house_processor"), genVillageHouseProcessor());
-    public static PointOfInterestType LECTERN_POI;
+    private static final StructureProcessorList HOUSE_PROCESSOR = BuiltinRegistries.register(BuiltinRegistries.PROCESSOR_LIST, new ResourceLocation("iceandfire:village_house_processor"), genVillageHouseProcessor());
+    public static PoiType LECTERN_POI;
     public static VillagerProfession SCRIBE;
 
     private static StructureProcessorList genVillageHouseProcessor() {
-        RuleStructureProcessor mossify = new RuleStructureProcessor(ImmutableList.of(new RuleEntry(new RandomBlockMatchRuleTest(Blocks.COBBLESTONE, 0.1F), AlwaysTrueRuleTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.getDefaultState())));
+        RuleProcessor mossify = new RuleProcessor(ImmutableList.of(new ProcessorRule(new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState())));
         return new StructureProcessorList(ImmutableList.of(mossify, new VillageHouseProcessor()));
     }
 
     public static void setup() {
         if(IafConfig.villagerHouseWeight > 0){
-            PlainsVillagePools.init();
-            SnowyVillagePools.init();
-            SavannaVillagePools.init();
-            DesertVillagePools.init();
-            TaigaVillagePools.init();
+            PlainVillagePools.bootstrap();
+            SnowyVillagePools.bootstrap();
+            SavannaVillagePools.bootstrap();
+            DesertVillagePools.bootstrap();
+            TaigaVillagePools.bootstrap();
 
             for (String type : VILLAGE_TYPES) {
                 addStructureToPool(new ResourceLocation("village/" + type + "/houses"), new ResourceLocation("village/" + type + "/terminators"), new ResourceLocation("iceandfire", "village/" + type + "_scriber_1"), IafConfig.villagerHouseWeight);
@@ -62,22 +74,22 @@ public class IafVillagerRegistry {
 
     }
 
-    private static JigsawPiece createWorkstation(String name) {
-        return new LegacySingleJigsawPiece(Either.left(new ResourceLocation("iceandfire", name)), () -> ProcessorLists.EMPTY, JigsawPattern.PlacementBehaviour.RIGID);
+    private static StructurePoolElement createWorkstation(String name) {
+        return new LegacySinglePoolElement(Either.left(new ResourceLocation("iceandfire", name)), () -> ProcessorLists.EMPTY, StructureTemplatePool.Projection.RIGID);
     }
 
     @SubscribeEvent
-    public static void registerPointOfInterests(final RegistryEvent.Register<PointOfInterestType> event) {
-        event.getRegistry().register(LECTERN_POI = new PointOfInterestType("scribe", ImmutableSet.copyOf(IafBlockRegistry.LECTERN.getStateContainer().getValidStates()), 1, 1).setRegistryName("iceandfire:scribe"));
-        PointOfInterestType.registerBlockStates(LECTERN_POI);
+    public static void registerPointOfInterests(final RegistryEvent.Register<PoiType> event) {
+        event.getRegistry().register(LECTERN_POI = new PoiType("scribe", ImmutableSet.copyOf(IafBlockRegistry.LECTERN.getStateDefinition().getPossibleStates()), 1, 1).setRegistryName("iceandfire:scribe"));
+        PoiType.registerBlockStates(LECTERN_POI);
     }
 
     @SubscribeEvent
     public static void registerVillagerProfessions(final RegistryEvent.Register<VillagerProfession> event) {
-        event.getRegistry().register(SCRIBE = new VillagerProfession("scribe", LECTERN_POI, ImmutableSet.of(), ImmutableSet.of(), SoundEvents.ENTITY_VILLAGER_WORK_LIBRARIAN).setRegistryName("iceandfire:scribe"));
+        event.getRegistry().register(SCRIBE = new VillagerProfession("scribe", LECTERN_POI, ImmutableSet.of(), ImmutableSet.of(), SoundEvents.VILLAGER_WORK_LIBRARIAN).setRegistryName("iceandfire:scribe"));
     }
 
-    public static void addScribeTrades(Int2ObjectMap<List<VillagerTrades.ITrade>> trades) {
+    public static void addScribeTrades(Int2ObjectMap<List<VillagerTrades.ItemListing>> trades) {
         final float emeraldForItemsMultiplier = 0.05F; //Values taken from VillagerTrades.java
         final float itemForEmeraldMultiplier = 0.05F;
         final float rareItemForEmeraldMultiplier = 0.2F;
@@ -112,11 +124,11 @@ public class IafVillagerRegistry {
     }
 
     private static void addStructureToPool(ResourceLocation pool, ResourceLocation terminatorPool, ResourceLocation toAdd, int weight) {
-        JigsawPattern old = WorldGenRegistries.JIGSAW_POOL.getOrDefault(pool);
-        List<JigsawPiece> shuffled = old != null ? old.getShuffledPieces(new Random()) : ImmutableList.of();
-        List<Pair<JigsawPiece, Integer>> newPieces = shuffled.stream().map(p -> new Pair<>(p, 1)).collect(Collectors.toList());
-        newPieces.add(new Pair<>(new LegacySingleJigsawPiece(Either.left(toAdd), () -> HOUSE_PROCESSOR, JigsawPattern.PlacementBehaviour.RIGID), weight));
-        JigsawPatternRegistry.func_244094_a(new JigsawPattern(pool, terminatorPool, newPieces));
+        StructureTemplatePool old = BuiltinRegistries.TEMPLATE_POOL.get(pool);
+        List<StructurePoolElement> shuffled = old != null ? old.getShuffledTemplates(new Random()) : ImmutableList.of();
+        List<Pair<StructurePoolElement, Integer>> newPieces = shuffled.stream().map(p -> new Pair<>(p, 1)).collect(Collectors.toList());
+        newPieces.add(new Pair<>(new LegacySinglePoolElement(Either.left(toAdd), () -> HOUSE_PROCESSOR, StructureTemplatePool.Projection.RIGID), weight));
+        Pools.register(new StructureTemplatePool(pool, terminatorPool, newPieces));
     }
 
 }

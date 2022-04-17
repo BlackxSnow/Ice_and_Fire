@@ -9,8 +9,8 @@ import javax.annotation.Nullable;
 
 import com.github.alexthe666.iceandfire.item.ItemBestiary;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
 
 public enum EnumBestiaryPages {
 
@@ -113,7 +113,7 @@ public enum EnumBestiaryPages {
 
     public static List<EnumBestiaryPages> possiblePages(ItemStack book) {
         if (book.getItem() instanceof ItemBestiary) {
-            CompoundNBT tag = book.getTag();
+            CompoundTag tag = book.getTag();
             List<EnumBestiaryPages> allPages = new ArrayList<EnumBestiaryPages>();
             for (EnumBestiaryPages page : EnumBestiaryPages.values()) {
                 allPages.add(page);
@@ -136,7 +136,7 @@ public enum EnumBestiaryPages {
     public static boolean addPage(EnumBestiaryPages page, ItemStack book) {
         boolean flag = false;
         if (book.getItem() instanceof ItemBestiary) {
-            CompoundNBT tag = book.getTag();
+            CompoundTag tag = book.getTag();
             List<EnumBestiaryPages> enumlist = containedPages(toList(tag.getIntArray("Pages")));
             if (!enumlist.contains(page)) {
                 enumlist.add(page);

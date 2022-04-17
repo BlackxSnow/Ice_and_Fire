@@ -7,13 +7,13 @@ import com.github.alexthe666.iceandfire.entity.EntityGorgon;
 import com.github.alexthe666.iceandfire.entity.EntityStymphalianBird;
 import com.google.common.base.Predicate;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
-import net.minecraft.entity.merchant.villager.AbstractVillagerEntity;
-import net.minecraft.entity.passive.AnimalEntity;
-import net.minecraft.entity.passive.GolemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.npc.AbstractVillager;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.AbstractGolem;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 
 public class StymphalianBirdAITarget extends NearestAttackableTargetGoal<LivingEntity> {
     private EntityStymphalianBird bird;
@@ -22,7 +22,7 @@ public class StymphalianBirdAITarget extends NearestAttackableTargetGoal<LivingE
         super(entityIn, classTarget, 0, checkSight, false, new Predicate<LivingEntity>() {
             @Override
             public boolean apply(@Nullable LivingEntity entity) {
-                return !EntityGorgon.isStoneMob(entity) && (entity instanceof PlayerEntity && !((PlayerEntity) entity).isCreative() || entity instanceof AbstractVillagerEntity || entity instanceof GolemEntity || entity instanceof AnimalEntity && IafConfig.stympahlianBirdAttackAnimals);
+                return !EntityGorgon.isStoneMob(entity) && (entity instanceof Player && !((Player) entity).isCreative() || entity instanceof AbstractVillager || entity instanceof AbstractGolem || entity instanceof Animal && IafConfig.stympahlianBirdAttackAnimals);
             }
         });
         this.bird = entityIn;
@@ -30,15 +30,15 @@ public class StymphalianBirdAITarget extends NearestAttackableTargetGoal<LivingE
 
 
     @Override
-    public boolean shouldExecute() {
-        boolean supe = super.shouldExecute();
-        if (nearestTarget != null && bird.getVictor() != null && bird.getVictor().getUniqueID().equals(nearestTarget.getUniqueID())) {
+    public boolean canUse() {
+        boolean supe = super.canUse();
+        if (target != null && bird.getVictor() != null && bird.getVictor().getUUID().equals(target.getUUID())) {
             return false;
         }
-        return supe && nearestTarget != null && !nearestTarget.getClass().equals(this.bird.getClass());
+        return supe && target != null && !target.getClass().equals(this.bird.getClass());
     }
 
-    protected AxisAlignedBB getTargetableArea(double targetDistance) {
-        return this.bird.getBoundingBox().grow(targetDistance, targetDistance, targetDistance);
+    protected AABB getTargetSearchArea(double targetDistance) {
+        return this.bird.getBoundingBox().inflate(targetDistance, targetDistance, targetDistance);
     }
 }

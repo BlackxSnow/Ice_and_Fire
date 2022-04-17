@@ -13,35 +13,35 @@ import com.github.alexthe666.iceandfire.misc.IafDamageRegistry;
 import com.github.alexthe666.iceandfire.misc.IafSoundRegistry;
 import com.google.common.base.Predicate;
 
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.UseAction;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.UseAnim;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.Level;
 
 public class ItemGorgonHead extends Item implements IUsesTEISR, ICustomRendered {
 
     public ItemGorgonHead() {
-        super(IceAndFire.PROXY.setupISTER(new Item.Properties().group(IceAndFire.TAB_ITEMS).maxDamage(1)));
+        super(IceAndFire.PROXY.setupISTER(new Item.Properties().tab(IceAndFire.TAB_ITEMS).durability(1)));
         this.setRegistryName(IceAndFire.MODID, "gorgon_head");
     }
 
     @Override
-    public void onCreated(ItemStack itemStack, World world, PlayerEntity player) {
-        itemStack.setTag(new CompoundNBT());
+    public void onCraftedBy(ItemStack itemStack, Level world, Player player) {
+        itemStack.setTag(new CompoundTag());
     }
 
     @Override
@@ -50,30 +50,30 @@ public class ItemGorgonHead extends Item implements IUsesTEISR, ICustomRendered 
     }
 
     @Override
-    public UseAction getUseAction(ItemStack stack) {
-        return UseAction.BOW;
+    public UseAnim getUseAnimation(ItemStack stack) {
+        return UseAnim.BOW;
     }
 
     @SuppressWarnings("deprecation")
     @Override
-    public void onPlayerStoppedUsing(ItemStack stack, World worldIn, LivingEntity entity, int timeLeft) {
+    public void releaseUsing(ItemStack stack, Level worldIn, LivingEntity entity, int timeLeft) {
         double dist = 32;
-        Vector3d Vector3d = entity.getEyePosition(1.0F);
-        Vector3d Vector3d1 = entity.getLook(1.0F);
-        Vector3d Vector3d2 = Vector3d.add(Vector3d1.x * dist, Vector3d1.y * dist, Vector3d1.z * dist);
+        Vec3 Vector3d = entity.getEyePosition(1.0F);
+        Vec3 Vector3d1 = entity.getViewVector(1.0F);
+        Vec3 Vector3d2 = Vector3d.add(Vector3d1.x * dist, Vector3d1.y * dist, Vector3d1.z * dist);
         double d1 = dist;
         Entity pointedEntity = null;
-        List<Entity> list = worldIn.getEntitiesInAABBexcluding(entity, entity.getBoundingBox().expand(Vector3d1.x * dist, Vector3d1.y * dist, Vector3d1.z * dist).grow(1.0D, 1.0D, 1.0D), new Predicate<Entity>() {
+        List<Entity> list = worldIn.getEntities(entity, entity.getBoundingBox().expandTowards(Vector3d1.x * dist, Vector3d1.y * dist, Vector3d1.z * dist).inflate(1.0D, 1.0D, 1.0D), new Predicate<Entity>() {
             public boolean apply(@Nullable Entity entity) {
-                boolean blindness = entity instanceof LivingEntity && ((LivingEntity) entity).isPotionActive(Effects.BLINDNESS) || (entity instanceof IBlacklistedFromStatues && !((IBlacklistedFromStatues) entity).canBeTurnedToStone());
-                return entity != null && entity.canBeCollidedWith() && !blindness && (entity instanceof PlayerEntity || (entity instanceof LivingEntity && DragonUtils.isAlive((LivingEntity)entity)));
+                boolean blindness = entity instanceof LivingEntity && ((LivingEntity) entity).hasEffect(MobEffects.BLINDNESS) || (entity instanceof IBlacklistedFromStatues && !((IBlacklistedFromStatues) entity).canBeTurnedToStone());
+                return entity != null && entity.isPickable() && !blindness && (entity instanceof Player || (entity instanceof LivingEntity && DragonUtils.isAlive((LivingEntity)entity)));
             }
         });
         double d2 = d1;
         for (int j = 0; j < list.size(); ++j) {
             Entity entity1 = list.get(j);
-            AxisAlignedBB axisalignedbb = entity1.getBoundingBox().grow(entity1.getCollisionBorderSize());
-            Optional<Vector3d> optional = axisalignedbb.rayTrace(Vector3d, Vector3d2);
+            AABB axisalignedbb = entity1.getBoundingBox().inflate(entity1.getPickRadius());
+            Optional<Vec3> optional = axisalignedbb.clip(Vector3d, Vector3d2);
 
             if (axisalignedbb.contains(Vector3d)) {
                 if (d2 >= 0.0D) {
@@ -84,7 +84,7 @@ public class ItemGorgonHead extends Item implements IUsesTEISR, ICustomRendered 
                 double d3 = Vector3d.distanceTo(optional.get());
 
                 if (d3 < d2 || d2 == 0.0D) {
-                    if (entity1.getLowestRidingEntity() == entity.getLowestRidingEntity() && !entity.canRiderInteract()) {
+                    if (entity1.getRootVehicle() == entity.getRootVehicle() && !entity.canRiderInteract()) {
                         if (d2 == 0.0D) {
                             pointedEntity = entity1;
                         }
@@ -99,18 +99,18 @@ public class ItemGorgonHead extends Item implements IUsesTEISR, ICustomRendered 
             if (pointedEntity instanceof LivingEntity) {
                 pointedEntity.playSound(IafSoundRegistry.TURN_STONE, 1, 1);
                 EntityStoneStatue statue = EntityStoneStatue.buildStatueEntity((LivingEntity) pointedEntity);
-                if(pointedEntity instanceof PlayerEntity){
-                    pointedEntity.attackEntityFrom(IafDamageRegistry.GORGON_DMG, Integer.MAX_VALUE);
+                if(pointedEntity instanceof Player){
+                    pointedEntity.hurt(IafDamageRegistry.GORGON_DMG, Integer.MAX_VALUE);
                 }else{
-                    if (!worldIn.isRemote)
+                    if (!worldIn.isClientSide)
                         pointedEntity.remove();
                 }
-                statue.setPositionAndRotation(pointedEntity.getPosX(), pointedEntity.getPosY(), pointedEntity.getPosZ(), pointedEntity.rotationYaw, pointedEntity.rotationPitch);
-                statue.renderYawOffset = pointedEntity.rotationYaw;
-                if (!worldIn.isRemote) {
-                    worldIn.addEntity(statue);
+                statue.absMoveTo(pointedEntity.getX(), pointedEntity.getY(), pointedEntity.getZ(), pointedEntity.yRot, pointedEntity.xRot);
+                statue.yBodyRot = pointedEntity.yRot;
+                if (!worldIn.isClientSide) {
+                    worldIn.addFreshEntity(statue);
                 }
-                if (entity instanceof PlayerEntity && !((PlayerEntity) entity).isCreative()) {
+                if (entity instanceof Player && !((Player) entity).isCreative()) {
                     stack.shrink(1);
                 }
             }
@@ -119,11 +119,11 @@ public class ItemGorgonHead extends Item implements IUsesTEISR, ICustomRendered 
     }
 
     @Override
-    public ActionResult<ItemStack> onItemRightClick(World worldIn, PlayerEntity playerIn, Hand hand) {
-        ItemStack itemStackIn = playerIn.getHeldItem(hand);
-        playerIn.setActiveHand(hand);
+    public InteractionResultHolder<ItemStack> use(Level worldIn, Player playerIn, InteractionHand hand) {
+        ItemStack itemStackIn = playerIn.getItemInHand(hand);
+        playerIn.startUsingItem(hand);
         itemStackIn.getTag().putBoolean("Active", true);
-        return new ActionResult<ItemStack>(ActionResultType.SUCCESS, itemStackIn);
+        return new InteractionResultHolder<ItemStack>(InteractionResult.SUCCESS, itemStackIn);
     }
 
     @Override
@@ -131,7 +131,7 @@ public class ItemGorgonHead extends Item implements IUsesTEISR, ICustomRendered 
     }
 
     @Override
-    public void addInformation(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
-        tooltip.add(new TranslationTextComponent("item.iceandfire.legendary_weapon.desc").mergeStyle(TextFormatting.GRAY));
+    public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> tooltip, TooltipFlag flagIn) {
+        tooltip.add(new TranslatableComponent("item.iceandfire.legendary_weapon.desc").withStyle(ChatFormatting.GRAY));
     }
 }

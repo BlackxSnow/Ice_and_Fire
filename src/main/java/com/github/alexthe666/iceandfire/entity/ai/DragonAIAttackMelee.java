@@ -6,13 +6,13 @@ import com.github.alexthe666.iceandfire.entity.EntityDragonBase;
 
 import com.github.alexthe666.iceandfire.pathfinding.raycoms.AdvancedPathNavigate;
 import com.github.alexthe666.iceandfire.pathfinding.raycoms.PathResult;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class DragonAIAttackMelee extends Goal {
     protected EntityDragonBase dragon;
@@ -33,13 +33,13 @@ public class DragonAIAttackMelee extends Goal {
         this.dragon = dragon;
         this.speedTowardsTarget = speedIn;
         this.longMemory = useLongMemory;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
-    public boolean shouldExecute() {
-        LivingEntity livingEntity = this.dragon.getAttackTarget();
-        if (!(this.dragon.getNavigator() instanceof AdvancedPathNavigate)) {
+    public boolean canUse() {
+        LivingEntity livingEntity = this.dragon.getTarget();
+        if (!(this.dragon.getNavigation() instanceof AdvancedPathNavigate)) {
             return false;
         }
         if (livingEntity == null) {
@@ -49,19 +49,19 @@ public class DragonAIAttackMelee extends Goal {
         } else if (!dragon.canMove() || dragon.isHovering() || dragon.isFlying()) {
             return false;
         } else {
-            attackPath = ((AdvancedPathNavigate) this.dragon.getNavigator()).moveToLivingEntity(livingEntity, speedTowardsTarget);
+            attackPath = ((AdvancedPathNavigate) this.dragon.getNavigation()).moveToLivingEntity(livingEntity, speedTowardsTarget);
             return true;
         }
     }
 
     @Override
-    public boolean shouldContinueExecuting() {
-        LivingEntity LivingEntity = this.dragon.getAttackTarget();
-        if (!(this.dragon.getNavigator() instanceof AdvancedPathNavigate)) {
+    public boolean canContinueToUse() {
+        LivingEntity LivingEntity = this.dragon.getTarget();
+        if (!(this.dragon.getNavigation() instanceof AdvancedPathNavigate)) {
             return false;
         }
         if (LivingEntity != null && !LivingEntity.isAlive()) {
-            this.resetTask();
+            this.stop();
             return false;
         }
 
@@ -69,47 +69,47 @@ public class DragonAIAttackMelee extends Goal {
     }
 
     @Override
-    public void startExecuting() {
+    public void start() {
         this.delayCounter = 0;
     }
 
     @Override
-    public void resetTask() {
-        LivingEntity LivingEntity = this.dragon.getAttackTarget();
-        if (LivingEntity instanceof PlayerEntity && (LivingEntity.isSpectator() || ((PlayerEntity) LivingEntity).isCreative())) {
-            this.dragon.setAttackTarget(null);
+    public void stop() {
+        LivingEntity LivingEntity = this.dragon.getTarget();
+        if (LivingEntity instanceof Player && (LivingEntity.isSpectator() || ((Player) LivingEntity).isCreative())) {
+            this.dragon.setTarget(null);
         }
-        this.dragon.getNavigator().clearPath();
+        this.dragon.getNavigation().stop();
     }
 
     @Override
     public void tick() {
-        LivingEntity entity = this.dragon.getAttackTarget();
+        LivingEntity entity = this.dragon.getTarget();
         if(delayCounter > 0){
             delayCounter--;
         }
         if (entity != null) {
             double resetDist = 10;
-            attackPath = ((AdvancedPathNavigate) this.dragon.getNavigator()).moveToLivingEntity(entity, speedTowardsTarget);
+            attackPath = ((AdvancedPathNavigate) this.dragon.getNavigation()).moveToLivingEntity(entity, speedTowardsTarget);
 
             if (dragon.getAnimation() == EntityDragonBase.ANIMATION_SHAKEPREY) {
-                this.resetTask();
+                this.stop();
                 return;
             }
-            double d0 = this.dragon.getDistanceSq(entity.getPosX(), entity.getBoundingBox().minY, entity.getPosZ());
+            double d0 = this.dragon.distanceToSqr(entity.getX(), entity.getBoundingBox().minY, entity.getZ());
             double d1 = this.getAttackReachSqr(entity);
             --this.delayCounter;
-            if ((this.longMemory || this.dragon.getEntitySenses().canSee(entity)) && this.delayCounter <= 0 && (this.targetX == 0.0D && this.targetY == 0.0D && this.targetZ == 0.0D || entity.getDistanceSq(this.targetX, this.targetY, this.targetZ) >= 1.0D || this.dragon.getRNG().nextFloat() < 0.05F)) {
-                this.targetX = entity.getPosX();
+            if ((this.longMemory || this.dragon.getSensing().canSee(entity)) && this.delayCounter <= 0 && (this.targetX == 0.0D && this.targetY == 0.0D && this.targetZ == 0.0D || entity.distanceToSqr(this.targetX, this.targetY, this.targetZ) >= 1.0D || this.dragon.getRandom().nextFloat() < 0.05F)) {
+                this.targetX = entity.getX();
                 this.targetY = entity.getBoundingBox().minY;
-                this.targetZ = entity.getPosZ();
-                this.delayCounter = 4 + this.dragon.getRNG().nextInt(7);
+                this.targetZ = entity.getZ();
+                this.delayCounter = 4 + this.dragon.getRandom().nextInt(7);
 
                 if (this.canPenalize) {
                     this.delayCounter += failedPathFindingPenalty;
-                    if (this.dragon.getNavigator().getPath() != null) {
-                        net.minecraft.pathfinding.PathPoint finalPathPoint = this.dragon.getNavigator().getPath().getFinalPathPoint();
-                        if (finalPathPoint != null && entity.getDistanceSq(finalPathPoint.x, finalPathPoint.y, finalPathPoint.z) < 1)
+                    if (this.dragon.getNavigation().getPath() != null) {
+                        net.minecraft.world.level.pathfinder.Node finalPathPoint = this.dragon.getNavigation().getPath().getEndNode();
+                        if (finalPathPoint != null && entity.distanceToSqr(finalPathPoint.x, finalPathPoint.y, finalPathPoint.z) < 1)
                             failedPathFindingPenalty = 0;
                         else
                             failedPathFindingPenalty += 10;
@@ -132,13 +132,13 @@ public class DragonAIAttackMelee extends Goal {
 
             if (d0 <= d1 && this.attackTick <= 0) {
                 this.attackTick = 20;
-                this.dragon.swingArm(Hand.MAIN_HAND);
-                this.dragon.attackEntityAsMob(entity);
+                this.dragon.swing(InteractionHand.MAIN_HAND);
+                this.dragon.doHurtTarget(entity);
             }
         }
     }
 
     protected double getAttackReachSqr(LivingEntity attackTarget) {
-        return this.dragon.getWidth() * 2.0F * this.dragon.getWidth() * 2.0F + attackTarget.getWidth();
+        return this.dragon.getBbWidth() * 2.0F * this.dragon.getBbWidth() * 2.0F + attackTarget.getBbWidth();
     }
 }

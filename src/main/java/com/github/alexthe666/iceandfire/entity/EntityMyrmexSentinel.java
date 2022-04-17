@@ -10,30 +10,30 @@ import com.github.alexthe666.iceandfire.entity.util.DragonUtils;
 import com.github.alexthe666.iceandfire.entity.util.MyrmexTrades;
 import com.google.common.base.Predicate;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.ai.goal.HurtByTargetGoal;
-import net.minecraft.entity.ai.goal.LookAtGoal;
-import net.minecraft.entity.ai.goal.LookRandomlyGoal;
-import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
-import net.minecraft.entity.ai.goal.SwimGoal;
-import net.minecraft.entity.merchant.villager.VillagerTrades;
-import net.minecraft.entity.monster.IMob;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.npc.VillagerTrades;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.Level;
 
 public class EntityMyrmexSentinel extends EntityMyrmexBase {
 
@@ -47,32 +47,32 @@ public class EntityMyrmexSentinel extends EntityMyrmexBase {
     private static final ResourceLocation TEXTURE_JUNGLE = new ResourceLocation("iceandfire:textures/models/myrmex/myrmex_jungle_sentinel.png");
     private static final ResourceLocation TEXTURE_DESERT_HIDDEN = new ResourceLocation("iceandfire:textures/models/myrmex/myrmex_desert_sentinel_hidden.png");
     private static final ResourceLocation TEXTURE_JUNGLE_HIDDEN = new ResourceLocation("iceandfire:textures/models/myrmex/myrmex_jungle_sentinel_hidden.png");
-    private static final DataParameter<Boolean> HIDING = EntityDataManager.createKey(EntityMyrmexSentinel.class, DataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> HIDING = SynchedEntityData.defineId(EntityMyrmexSentinel.class, EntityDataSerializers.BOOLEAN);
     public float holdingProgress;
     public float hidingProgress;
     public int visibleTicks = 0;
     public int daylightTicks = 0;
 
-    public EntityMyrmexSentinel(EntityType t, World worldIn) {
+    public EntityMyrmexSentinel(EntityType t, Level worldIn) {
         super(t, worldIn);
     }
 
     @Override
-    protected VillagerTrades.ITrade[] getLevel1Trades() {
+    protected VillagerTrades.ItemListing[] getLevel1Trades() {
         return isJungle() ? MyrmexTrades.JUNGLE_SENTINEL.get(1) : MyrmexTrades.DESERT_SENTINEL.get(1);
     }
 
     @Override
-    protected VillagerTrades.ITrade[] getLevel2Trades() {
+    protected VillagerTrades.ItemListing[] getLevel2Trades() {
         return isJungle() ? MyrmexTrades.JUNGLE_SENTINEL.get(2) : MyrmexTrades.DESERT_SENTINEL.get(2);
     }
 
     @Nullable
-    protected ResourceLocation getLootTable() {
+    protected ResourceLocation getDefaultLootTable() {
         return isJungle() ? JUNGLE_LOOT : DESERT_LOOT;
     }
 
-    protected int getExperiencePoints(PlayerEntity player) {
+    protected int getExperienceReward(Player player) {
         return 8;
     }
 
@@ -80,14 +80,14 @@ public class EntityMyrmexSentinel extends EntityMyrmexBase {
         return this.getPassengers().isEmpty() ? null : this.getPassengers().get(0);
     }
 
-    public void livingTick() {
-        super.livingTick();
+    public void aiStep() {
+        super.aiStep();
         if (visibleTicks > 0) {
             visibleTicks--;
         } else {
             visibleTicks = 0;
         }
-        if(this.getAttackTarget() != null){
+        if(this.getTarget() != null){
             visibleTicks = 100;
         }
         if (this.canSeeSky()) {
@@ -97,7 +97,7 @@ public class EntityMyrmexSentinel extends EntityMyrmexBase {
         }
         boolean holding = getHeldEntity() != null;
         boolean hiding = isHiding() && !this.hasCustomer();
-        if ((holding || this.isOnResin() || this.getAttackTarget() != null) || visibleTicks > 0) {
+        if ((holding || this.isOnResin() || this.getTarget() != null) || visibleTicks > 0) {
             this.setHiding(false);
         }
         if (holding && holdingProgress < 20.0F) {
@@ -106,7 +106,7 @@ public class EntityMyrmexSentinel extends EntityMyrmexBase {
             holdingProgress -= 1.0F;
         }
         if (hiding) {
-            this.rotationYaw = this.prevRotationYaw;
+            this.yRot = this.yRotO;
         }
         if (hiding && hidingProgress < 20.0F) {
             hidingProgress += 1.0F;
@@ -117,80 +117,80 @@ public class EntityMyrmexSentinel extends EntityMyrmexBase {
             this.setAnimation(ANIMATION_NIBBLE);
             if (this.getAnimationTick() == 5) {
                 this.playBiteSound();
-                this.getHeldEntity().attackEntityFrom(DamageSource.causeMobDamage(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue() / 6));
+                this.getHeldEntity().hurt(DamageSource.mobAttack(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue() / 6));
             }
         }
-        if (this.getAnimation() == ANIMATION_GRAB && this.getAttackTarget() != null && this.getAnimationTick() == 7) {
+        if (this.getAnimation() == ANIMATION_GRAB && this.getTarget() != null && this.getAnimationTick() == 7) {
             this.playStingSound();
-            if (this.getAttackBounds().intersects(this.getAttackTarget().getBoundingBox())) {
-                this.getAttackTarget().attackEntityFrom(DamageSource.causeMobDamage(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue() / 2));
+            if (this.getAttackBounds().intersects(this.getTarget().getBoundingBox())) {
+                this.getTarget().hurt(DamageSource.mobAttack(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue() / 2));
                 //Make sure it doesn't grab a dead dragon
-                if (this.getAttackTarget() instanceof EntityDragonBase) {
-                    if(!((EntityDragonBase) this.getAttackTarget()).isMobDead()){
-                        this.getAttackTarget().startRiding(this);
+                if (this.getTarget() instanceof EntityDragonBase) {
+                    if(!((EntityDragonBase) this.getTarget()).isMobDead()){
+                        this.getTarget().startRiding(this);
                     }
                 }
                 else {
-                    this.getAttackTarget().startRiding(this);
+                    this.getTarget().startRiding(this);
                 }
             }
         }
-        if (this.getAnimation() == ANIMATION_SLASH && this.getAttackTarget() != null && this.getAnimationTick() % 5 == 0 && this.getAnimationTick() <= 20) {
+        if (this.getAnimation() == ANIMATION_SLASH && this.getTarget() != null && this.getAnimationTick() % 5 == 0 && this.getAnimationTick() <= 20) {
             this.playBiteSound();
-            if (this.getAttackBounds().intersects(this.getAttackTarget().getBoundingBox())) {
-                this.getAttackTarget().attackEntityFrom(DamageSource.causeMobDamage(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue()) / 4);
+            if (this.getAttackBounds().intersects(this.getTarget().getBoundingBox())) {
+                this.getTarget().hurt(DamageSource.mobAttack(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue()) / 4);
             }
         }
         if (this.getAnimation() == ANIMATION_STING && (this.getAnimationTick() == 0 || this.getAnimationTick() == 10)) {
             this.playStingSound();
         }
-        if (this.getAnimation() == ANIMATION_STING && this.getAttackTarget() != null && (this.getAnimationTick() == 6 || this.getAnimationTick() == 16)) {
-            double dist = this.getDistanceSq(this.getAttackTarget());
+        if (this.getAnimation() == ANIMATION_STING && this.getTarget() != null && (this.getAnimationTick() == 6 || this.getAnimationTick() == 16)) {
+            double dist = this.distanceToSqr(this.getTarget());
             if (dist < 18) {
-                this.getAttackTarget().attackEntityFrom(DamageSource.causeMobDamage(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue()));
-                this.getAttackTarget().addPotionEffect(new EffectInstance(Effects.POISON, 100, 3));
+                this.getTarget().hurt(DamageSource.mobAttack(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue()));
+                this.getTarget().addEffect(new MobEffectInstance(MobEffects.POISON, 100, 3));
             }
         }
     }
 
     protected void registerGoals() {
-        this.goalSelector.addGoal(0, new SwimGoal(this));
+        this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(0, new MyrmexAIFindHidingSpot(this));
         this.goalSelector.addGoal(0, new MyrmexAITradePlayer(this));
         this.goalSelector.addGoal(0, new MyrmexAILookAtTradePlayer(this));
         this.goalSelector.addGoal(1, new MyrmexAIAttackMelee(this, 1.0D, true));
         this.goalSelector.addGoal(3, new MyrmexAILeaveHive(this, 1.0D));
         this.goalSelector.addGoal(5, new MyrmexAIWander(this, 1D));
-        this.goalSelector.addGoal(6, new LookAtGoal(this, PlayerEntity.class, 6.0F));
-        this.goalSelector.addGoal(7, new LookRandomlyGoal(this));
+        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
         this.targetSelector.addGoal(1, new MyrmexAIDefendHive(this));
         this.targetSelector.addGoal(3, new HurtByTargetGoal(this));
         this.targetSelector.addGoal(4, new MyrmexAIAttackPlayers(this));
         this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 4, true, true, new Predicate<LivingEntity>() {
             public boolean apply(@Nullable LivingEntity entity) {
-                return entity != null && !EntityMyrmexBase.haveSameHive(EntityMyrmexSentinel.this, entity) && DragonUtils.isAlive(entity) && !(entity instanceof IMob);
+                return entity != null && !EntityMyrmexBase.haveSameHive(EntityMyrmexSentinel.this, entity) && DragonUtils.isAlive(entity) && !(entity instanceof Enemy);
             }
         }));
     }
 
 
-    protected void registerData() {
-        super.registerData();
-        this.dataManager.register(HIDING, Boolean.valueOf(false));
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(HIDING, Boolean.valueOf(false));
     }
 
-    public static AttributeModifierMap.MutableAttribute bakeAttributes() {
-        return MobEntity.func_233666_p_()
+    public static AttributeSupplier.Builder bakeAttributes() {
+        return Mob.createMobAttributes()
                 //HEALTH
-                .createMutableAttribute(Attributes.MAX_HEALTH, 60D)
+                .add(Attributes.MAX_HEALTH, 60D)
                 //SPEED
-                .createMutableAttribute(Attributes.MOVEMENT_SPEED, 0.35D)
+                .add(Attributes.MOVEMENT_SPEED, 0.35D)
                 //ATTACK
-                .createMutableAttribute(Attributes.ATTACK_DAMAGE, IafConfig.myrmexBaseAttackStrength * 3D)
+                .add(Attributes.ATTACK_DAMAGE, IafConfig.myrmexBaseAttackStrength * 3D)
                 //FOLLOW RANGE
-                .createMutableAttribute(Attributes.FOLLOW_RANGE, 64.0D)
+                .add(Attributes.FOLLOW_RANGE, 64.0D)
                 //ARMOR
-                .createMutableAttribute(Attributes.ARMOR, 12.0D);
+                .add(Attributes.ARMOR, 12.0D);
     }
 
     @Override
@@ -214,15 +214,15 @@ public class EntityMyrmexSentinel extends EntityMyrmexBase {
     }
 
     @Override
-    public void writeAdditional(CompoundNBT tag) {
-        super.writeAdditional(tag);
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
         tag.putBoolean("Hiding", this.isHiding());
         tag.putInt("DaylightTicks", daylightTicks);
     }
 
     @Override
-    public void readAdditional(CompoundNBT tag) {
-        super.readAdditional(tag);
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
         this.setHiding(tag.getBoolean("Hiding"));
         this.daylightTicks = tag.getInt("DaylightTicks");
     }
@@ -235,48 +235,48 @@ public class EntityMyrmexSentinel extends EntityMyrmexBase {
         return false;
     }
 
-    public void updatePassenger(Entity passenger) {
-        super.updatePassenger(passenger);
-        if (this.isPassenger(passenger)) {
-            renderYawOffset = rotationYaw;
+    public void positionRider(Entity passenger) {
+        super.positionRider(passenger);
+        if (this.hasPassenger(passenger)) {
+            yBodyRot = yRot;
             float radius = 1.25F;
             float extraY = 0.35F;
             if (this.getAnimation() == ANIMATION_GRAB) {
-                int modTick = MathHelper.clamp(this.getAnimationTick(), 0, 10);
+                int modTick = Mth.clamp(this.getAnimationTick(), 0, 10);
                 radius = 3.25F - modTick * 0.2F;
                 extraY = modTick * 0.035F;
             }
-            float angle = (0.01745329251F * this.renderYawOffset);
-            double extraX = radius * MathHelper.sin((float) (Math.PI + angle));
-            double extraZ = radius * MathHelper.cos(angle);
-            if (passenger.getHeight() >= 1.75F) {
-                extraY = passenger.getHeight() - 2F;
+            float angle = (0.01745329251F * this.yBodyRot);
+            double extraX = radius * Mth.sin((float) (Math.PI + angle));
+            double extraZ = radius * Mth.cos(angle);
+            if (passenger.getBbHeight() >= 1.75F) {
+                extraY = passenger.getBbHeight() - 2F;
             }
-            passenger.setPosition(this.getPosX() + extraX, this.getPosY() + extraY, this.getPosZ() + extraZ);
+            passenger.setPos(this.getX() + extraX, this.getY() + extraY, this.getZ() + extraZ);
         }
     }
 
-    public boolean attackEntityFrom(DamageSource source, float amount) {
-        if (amount >= 1.0D && !this.getPassengers().isEmpty() && rand.nextInt(2) == 0) {
+    public boolean hurt(DamageSource source, float amount) {
+        if (amount >= 1.0D && !this.getPassengers().isEmpty() && random.nextInt(2) == 0) {
             for (Entity entity : this.getPassengers()) {
                 entity.stopRiding();
             }
         }
         visibleTicks = 300;
         this.setHiding(false);
-        return super.attackEntityFrom(source, amount);
+        return super.hurt(source, amount);
     }
 
     @Override
-    public boolean attackEntityAsMob(Entity entityIn) {
+    public boolean doHurtTarget(Entity entityIn) {
         if (this.getGrowthStage() < 2) {
             return false;
         }
         if (this.getAnimation() != ANIMATION_STING && this.getAnimation() != ANIMATION_SLASH && this.getAnimation() != ANIMATION_GRAB && this.getHeldEntity() == null) {
-            if (this.getRNG().nextInt(2) == 0 && entityIn.getWidth() < 2F) {
+            if (this.getRandom().nextInt(2) == 0 && entityIn.getBbWidth() < 2F) {
                 this.setAnimation(ANIMATION_GRAB);
             } else {
-                this.setAnimation(this.getRNG().nextBoolean() ? ANIMATION_STING : ANIMATION_SLASH);
+                this.setAnimation(this.getRandom().nextBoolean() ? ANIMATION_STING : ANIMATION_SLASH);
             }
             visibleTicks = 300;
             return true;
@@ -303,20 +303,20 @@ public class EntityMyrmexSentinel extends EntityMyrmexBase {
 
 
     public boolean isHiding() {
-        return this.dataManager.get(HIDING).booleanValue();
+        return this.entityData.get(HIDING).booleanValue();
     }
 
     public void setHiding(boolean hiding) {
-        this.dataManager.set(HIDING, hiding);
+        this.entityData.set(HIDING, hiding);
     }
 
     @Override
-    public int getXp() {
+    public int getVillagerXp() {
         return 4;
     }
 
     @Override
-    public boolean hasXPBar() {
+    public boolean showProgressBar() {
         return false;
     }
 }

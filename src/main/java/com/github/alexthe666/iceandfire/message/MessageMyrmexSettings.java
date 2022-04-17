@@ -6,10 +6,10 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.EntityMyrmexBase;
 import com.github.alexthe666.iceandfire.entity.util.MyrmexHive;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -27,11 +27,11 @@ public class MessageMyrmexSettings {
         this.roomToDelete = roomToDelete;
     }
 
-    public static MessageMyrmexSettings read(PacketBuffer buf) {
+    public static MessageMyrmexSettings read(FriendlyByteBuf buf) {
         return new MessageMyrmexSettings(buf.readInt(), buf.readBoolean(), buf.readBoolean(), buf.readLong());
     }
 
-    public static void write(MessageMyrmexSettings message, PacketBuffer buf) {
+    public static void write(MessageMyrmexSettings message, FriendlyByteBuf buf) {
         buf.writeInt(message.queenID);
         buf.writeBoolean(message.reproduces);
         buf.writeBoolean(message.deleteRoom);
@@ -45,19 +45,19 @@ public class MessageMyrmexSettings {
 
         public static void handle(MessageMyrmexSettings message, Supplier<NetworkEvent.Context> context) {
             context.get().setPacketHandled(true);
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             if(context.get().getDirection().getReceptionSide() == LogicalSide.CLIENT){
                 player = IceAndFire.PROXY.getClientSidePlayer();
             }
             if (player != null) {
-                if (player.world != null) {
-                    Entity entity = player.world.getEntityByID(message.queenID);
+                if (player.level != null) {
+                    Entity entity = player.level.getEntity(message.queenID);
                     if (entity != null && entity instanceof EntityMyrmexBase) {
                         MyrmexHive hive = ((EntityMyrmexBase) entity).getHive();
                         if(hive != null){
                             hive.reproduces = message.reproduces;
                             if(message.deleteRoom){
-                                hive.removeRoom(BlockPos.fromLong(message.roomToDelete));
+                                hive.removeRoom(BlockPos.of(message.roomToDelete));
                             }
                         }
                     }

@@ -5,12 +5,12 @@ import javax.annotation.Nullable;
 import com.github.alexthe666.iceandfire.client.model.ModelDreadKnight;
 import com.github.alexthe666.iceandfire.client.render.entity.layer.LayerGenericGlowing;
 import com.github.alexthe666.iceandfire.entity.EntityDreadKnight;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.entity.EntityRendererManager;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.client.renderer.entity.layers.HeldItemLayer;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
+import net.minecraft.resources.ResourceLocation;
 
 public class RenderDreadKnight extends MobRenderer<EntityDreadKnight, ModelDreadKnight> {
     public static final ResourceLocation TEXTURE_EYES = new ResourceLocation("iceandfire:textures/models/dread/dread_knight_eyes.png");
@@ -18,20 +18,20 @@ public class RenderDreadKnight extends MobRenderer<EntityDreadKnight, ModelDread
     public static final ResourceLocation TEXTURE_1 = new ResourceLocation("iceandfire:textures/models/dread/dread_knight_2.png");
     public static final ResourceLocation TEXTURE_2 = new ResourceLocation("iceandfire:textures/models/dread/dread_knight_3.png");
 
-    public RenderDreadKnight(EntityRendererManager renderManager) {
+    public RenderDreadKnight(EntityRenderDispatcher renderManager) {
         super(renderManager, new ModelDreadKnight(0.0F, false), 0.6F);
         this.addLayer(new LayerGenericGlowing(this, TEXTURE_EYES));
-        this.addLayer(new HeldItemLayer<EntityDreadKnight, ModelDreadKnight>(this));
+        this.addLayer(new ItemInHandLayer<EntityDreadKnight, ModelDreadKnight>(this));
     }
 
     @Override
-    protected void preRenderCallback(EntityDreadKnight entity, MatrixStack matrixStackIn, float partialTickTime) {
+    protected void scale(EntityDreadKnight entity, PoseStack matrixStackIn, float partialTickTime) {
         matrixStackIn.scale(0.95F, 0.95F, 0.95F);
     }
 
     @Nullable
     @Override
-    public ResourceLocation getEntityTexture(EntityDreadKnight entity) {
+    public ResourceLocation getTextureLocation(EntityDreadKnight entity) {
         switch (entity.getArmorVariant()) {
             case 0:
                 return TEXTURE_0;

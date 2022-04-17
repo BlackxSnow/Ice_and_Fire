@@ -9,23 +9,23 @@ import java.util.Map;
 import com.github.alexthe666.citadel.client.model.AdvancedModelBox;
 import com.google.common.collect.ImmutableList;
 
-import net.minecraft.client.renderer.model.ModelRenderer;
+import net.minecraft.client.model.geom.ModelPart;
 
 public class EntityModelPartBuilder {
-    private static final Map<String, Iterable<ModelRenderer>> PART_MAP = new HashMap<>();
+    private static final Map<String, Iterable<ModelPart>> PART_MAP = new HashMap<>();
     private static final Map<String, Iterable<AdvancedModelBox>> ALL_PART_MAP = new HashMap<>();
 
-    private static Iterable<ModelRenderer> getPartsForRenderFromClass(Class clazz, String identifier) {
-        Iterable<ModelRenderer> boxes = null;
+    private static Iterable<ModelPart> getPartsForRenderFromClass(Class clazz, String identifier) {
+        Iterable<ModelPart> boxes = null;
         if (PART_MAP.get(identifier) == null) {
-            List<ModelRenderer> rendererList = new ArrayList<>();
+            List<ModelPart> rendererList = new ArrayList<>();
             try {
                 for (Field f : clazz.getDeclaredFields()) {
                     Object obj = f.get(null);
-                    if (obj instanceof ModelRenderer) {
+                    if (obj instanceof ModelPart) {
 
 
-                        rendererList.add((ModelRenderer) obj);
+                        rendererList.add((ModelPart) obj);
                     }
                 }
             } catch (Exception e0) {

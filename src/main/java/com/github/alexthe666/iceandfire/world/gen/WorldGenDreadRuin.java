@@ -6,17 +6,17 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.mojang.serialization.Codec;
 
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Rotation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.ISeedReader;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.gen.ChunkGenerator;
-import net.minecraft.world.gen.feature.Feature;
-import net.minecraft.world.gen.feature.NoFeatureConfig;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
-public class WorldGenDreadRuin extends Feature<NoFeatureConfig> {
+public class WorldGenDreadRuin extends Feature<NoneFeatureConfiguration> {
     private static final ResourceLocation STRUCTURE_0 = new ResourceLocation(IceAndFire.MODID, "dread_ruin_0");
     private static final ResourceLocation STRUCTURE_1 = new ResourceLocation(IceAndFire.MODID, "dread_ruin_1");
     private static final ResourceLocation STRUCTURE_2 = new ResourceLocation(IceAndFire.MODID, "dread_ruin_2");
@@ -32,7 +32,7 @@ public class WorldGenDreadRuin extends Feature<NoFeatureConfig> {
     private static final ResourceLocation STRUCTURE_12 = new ResourceLocation(IceAndFire.MODID, "dread_ruin_12");
     private static final Direction[] HORIZONTALS = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
 
-    public WorldGenDreadRuin(Codec<NoFeatureConfig> configFactoryIn) {
+    public WorldGenDreadRuin(Codec<NoneFeatureConfiguration> configFactoryIn) {
         super(configFactoryIn);
     }
 
@@ -83,10 +83,10 @@ public class WorldGenDreadRuin extends Feature<NoFeatureConfig> {
     }
 
     @Override
-    public boolean generate(ISeedReader worldIn, ChunkGenerator p_230362_3_, Random rand, BlockPos position, NoFeatureConfig p_230362_6_) {
+    public boolean place(WorldGenLevel worldIn, ChunkGenerator p_230362_3_, Random rand, BlockPos position, NoneFeatureConfiguration p_230362_6_) {
         ResourceLocation structure = getRandomStructure(rand);
         Direction facing = HORIZONTALS[rand.nextInt(3)];
-        MinecraftServer server = worldIn.getWorld().getServer();
+        MinecraftServer server = worldIn.getLevel().getServer();
         Biome biome = worldIn.getBiome(position);
         /*TemplateManager templateManager = server.getWorld(worldIn.getDimensionType()).getStructureTemplateManager();
         PlacementSettings settings = new PlacementSettings().setRotation(getRotationFromFacing(facing)).addProcessor(new DreadRuinProcessor());

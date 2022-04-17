@@ -2,23 +2,23 @@ package com.github.alexthe666.iceandfire.block;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.BreakableBlock;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.item.BlockItemUseContext;
-import net.minecraft.state.BooleanProperty;
-import net.minecraft.state.StateContainer;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.HalfTransparentBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.core.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.LevelAccessor;
 
-import net.minecraft.block.AbstractBlock.Properties;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
-public class BlockMyrmexConnectedResin extends BreakableBlock {
+public class BlockMyrmexConnectedResin extends HalfTransparentBlock {
 
     public static final BooleanProperty UP = BooleanProperty.create("up");
     public static final BooleanProperty DOWN = BooleanProperty.create("down");
@@ -30,19 +30,19 @@ public class BlockMyrmexConnectedResin extends BreakableBlock {
     public BlockMyrmexConnectedResin(boolean jungle, boolean glass) {
         super(
     		Properties
-    			.create(Material.ROCK)
-    			.hardnessAndResistance(glass ? 1.5F : 3.5F)
-    			.notSolid()
-    			.variableOpacity()
+    			.of(Material.STONE)
+    			.strength(glass ? 1.5F : 3.5F)
+    			.noOcclusion()
+    			.dynamicShape()
     			.sound(glass ? SoundType.GLASS : SoundType.STONE)
 		);
 
-        this.setDefaultState(this.getStateContainer().getBaseState().with(UP, Boolean.valueOf(false))
-                .with(DOWN, Boolean.valueOf(false))
-                .with(NORTH, Boolean.valueOf(false))
-                .with(EAST, Boolean.valueOf(false))
-                .with(SOUTH, Boolean.valueOf(false))
-                .with(WEST, Boolean.valueOf(false))
+        this.registerDefaultState(this.getStateDefinition().any().setValue(UP, Boolean.valueOf(false))
+                .setValue(DOWN, Boolean.valueOf(false))
+                .setValue(NORTH, Boolean.valueOf(false))
+                .setValue(EAST, Boolean.valueOf(false))
+                .setValue(SOUTH, Boolean.valueOf(false))
+                .setValue(WEST, Boolean.valueOf(false))
         );
         if (glass) {
             this.setRegistryName(IceAndFire.MODID, jungle ? "myrmex_jungle_resin_glass" : "myrmex_desert_resin_glass");
@@ -52,16 +52,16 @@ public class BlockMyrmexConnectedResin extends BreakableBlock {
 
     }
 
-    public BlockState getStateForPlacement(BlockItemUseContext context) {
-        IBlockReader iblockreader = context.getWorld();
-        BlockPos blockpos = context.getPos();
-        FluidState ifluidstate = context.getWorld().getFluidState(context.getPos());
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        BlockGetter iblockreader = context.getLevel();
+        BlockPos blockpos = context.getClickedPos();
+        FluidState ifluidstate = context.getLevel().getFluidState(context.getClickedPos());
         BlockPos blockpos1 = blockpos.north();
         BlockPos blockpos2 = blockpos.east();
         BlockPos blockpos3 = blockpos.south();
         BlockPos blockpos4 = blockpos.west();
-        BlockPos blockpos5 = blockpos.up();
-        BlockPos blockpos6 = blockpos.down();
+        BlockPos blockpos5 = blockpos.above();
+        BlockPos blockpos6 = blockpos.below();
         BlockState blockstate = iblockreader.getBlockState(blockpos1);
         BlockState blockstate1 = iblockreader.getBlockState(blockpos2);
         BlockState blockstate2 = iblockreader.getBlockState(blockpos3);
@@ -69,15 +69,15 @@ public class BlockMyrmexConnectedResin extends BreakableBlock {
         BlockState blockstate4 = iblockreader.getBlockState(blockpos5);
         BlockState blockstate5 = iblockreader.getBlockState(blockpos6);
         return super.getStateForPlacement(context)
-                .with(NORTH, Boolean.valueOf(this.canFenceConnectTo(blockstate, false, Direction.SOUTH)))
-                .with(EAST, Boolean.valueOf(this.canFenceConnectTo(blockstate1, false, Direction.WEST)))
-                .with(SOUTH, Boolean.valueOf(this.canFenceConnectTo(blockstate2, false, Direction.NORTH)))
-                .with(WEST, Boolean.valueOf(this.canFenceConnectTo(blockstate3, false, Direction.EAST)))
-                .with(UP, Boolean.valueOf(this.canFenceConnectTo(blockstate4, false, Direction.UP)))
-                .with(DOWN, Boolean.valueOf(this.canFenceConnectTo(blockstate5, false, Direction.DOWN)));
+                .setValue(NORTH, Boolean.valueOf(this.canFenceConnectTo(blockstate, false, Direction.SOUTH)))
+                .setValue(EAST, Boolean.valueOf(this.canFenceConnectTo(blockstate1, false, Direction.WEST)))
+                .setValue(SOUTH, Boolean.valueOf(this.canFenceConnectTo(blockstate2, false, Direction.NORTH)))
+                .setValue(WEST, Boolean.valueOf(this.canFenceConnectTo(blockstate3, false, Direction.EAST)))
+                .setValue(UP, Boolean.valueOf(this.canFenceConnectTo(blockstate4, false, Direction.UP)))
+                .setValue(DOWN, Boolean.valueOf(this.canFenceConnectTo(blockstate5, false, Direction.DOWN)));
     }
 
-    public BlockState updatePostPlacement(BlockState stateIn, Direction facing, BlockState facingState, IWorld worldIn, BlockPos currentPos, BlockPos facingPos) {
+    public BlockState updateShape(BlockState stateIn, Direction facing, BlockState facingState, LevelAccessor worldIn, BlockPos currentPos, BlockPos facingPos) {
         BooleanProperty connect = null;
         switch (facing) {
             case NORTH:
@@ -99,11 +99,11 @@ public class BlockMyrmexConnectedResin extends BreakableBlock {
                 connect = UP;
                 break;
         }
-        return stateIn.with(connect, Boolean.valueOf(this.canFenceConnectTo(facingState, false, facing.getOpposite())));
+        return stateIn.setValue(connect, Boolean.valueOf(this.canFenceConnectTo(facingState, false, facing.getOpposite())));
     }
 
 
-    protected void fillStateContainer(StateContainer.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(NORTH, EAST, WEST, SOUTH, DOWN, UP);
     }
 

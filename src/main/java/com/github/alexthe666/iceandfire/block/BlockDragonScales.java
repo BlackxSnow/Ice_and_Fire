@@ -6,19 +6,19 @@ import javax.annotation.Nullable;
 
 import com.github.alexthe666.iceandfire.enums.EnumDragonEgg;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.ToolType;
 
-import net.minecraft.block.AbstractBlock.Properties;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
 public class BlockDragonScales extends Block implements IDragonProof {
     EnumDragonEgg type;
@@ -26,13 +26,13 @@ public class BlockDragonScales extends Block implements IDragonProof {
     public BlockDragonScales(String name, EnumDragonEgg type) {
         super(
     		Properties
-    			.create(Material.ROCK)
-    			.variableOpacity()
-    			.hardnessAndResistance(30F, 500)
+    			.of(Material.STONE)
+    			.dynamicShape()
+    			.strength(30F, 500)
     			.harvestTool(ToolType.PICKAXE)
     			.harvestLevel(2)
     			.sound(SoundType.STONE)
-    			.setRequiresTool()
+    			.requiresCorrectToolForDrops()
 		);
 
         this.setRegistryName("iceandfire:" + name);
@@ -42,7 +42,7 @@ public class BlockDragonScales extends Block implements IDragonProof {
 
     @Override
     @OnlyIn(Dist.CLIENT)
-    public void addInformation(ItemStack stack, @Nullable IBlockReader worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
-        tooltip.add(new TranslationTextComponent("dragon." + type.toString().toLowerCase()).mergeStyle(type.color));
+    public void appendHoverText(ItemStack stack, @Nullable BlockGetter worldIn, List<Component> tooltip, TooltipFlag flagIn) {
+        tooltip.add(new TranslatableComponent("dragon." + type.toString().toLowerCase()).withStyle(type.color));
     }
 }

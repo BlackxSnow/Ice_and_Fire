@@ -4,11 +4,11 @@ import java.util.EnumSet;
 
 import com.github.alexthe666.iceandfire.entity.EntityHippogryph;
 
-import net.minecraft.entity.ai.RandomPositionGenerator;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.entity.ai.util.RandomPos;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class HippogryphAIWander extends Goal {
     private EntityHippogryph hippo;
@@ -27,11 +27,11 @@ public class HippogryphAIWander extends Goal {
         this.hippo = creatureIn;
         this.speed = speedIn;
         this.executionChance = chance;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
-    public boolean shouldExecute() {
+    public boolean canUse() {
         if (!hippo.canMove()) {
             return false;
         }
@@ -39,11 +39,11 @@ public class HippogryphAIWander extends Goal {
             return false;
         }
         if (!this.mustUpdate) {
-            if (this.hippo.getRNG().nextInt(executionChance) != 0) {
+            if (this.hippo.getRandom().nextInt(executionChance) != 0) {
                 return false;
             }
         }
-        Vector3d Vector3d = RandomPositionGenerator.findRandomTarget(this.hippo, 10, 7);
+        Vec3 Vector3d = RandomPos.getPos(this.hippo, 10, 7);
         if (Vector3d == null) {
             return false;
         } else {
@@ -57,13 +57,13 @@ public class HippogryphAIWander extends Goal {
     }
 
     @Override
-    public boolean shouldContinueExecuting() {
-        return !this.hippo.getNavigator().noPath();
+    public boolean canContinueToUse() {
+        return !this.hippo.getNavigation().isDone();
     }
 
     @Override
-    public void startExecuting() {
-        this.hippo.getNavigator().tryMoveToXYZ(this.xPosition, this.yPosition, this.zPosition, this.speed);
+    public void start() {
+        this.hippo.getNavigation().moveTo(this.xPosition, this.yPosition, this.zPosition, this.speed);
     }
 
     public void makeUpdate() {

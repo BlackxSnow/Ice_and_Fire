@@ -5,34 +5,34 @@ import javax.annotation.Nullable;
 import com.github.alexthe666.iceandfire.entity.EntitySeaSerpent;
 import com.google.common.base.Predicate;
 
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
-import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.phys.AABB;
 
 public class FlyingAITarget extends NearestAttackableTargetGoal {
 
-    public FlyingAITarget(MobEntity creature, Class classTarget, boolean checkSight) {
+    public FlyingAITarget(Mob creature, Class classTarget, boolean checkSight) {
         super(creature, classTarget, checkSight);
     }
 
-    public FlyingAITarget(MobEntity creature, Class classTarget, boolean checkSight, boolean onlyNearby) {
+    public FlyingAITarget(Mob creature, Class classTarget, boolean checkSight, boolean onlyNearby) {
         super(creature, classTarget, checkSight, onlyNearby);
     }
 
-    public FlyingAITarget(MobEntity creature, Class classTarget, int chance, boolean checkSight, boolean onlyNearby, @Nullable final Predicate targetSelector) {
+    public FlyingAITarget(Mob creature, Class classTarget, int chance, boolean checkSight, boolean onlyNearby, @Nullable final Predicate targetSelector) {
         super(creature, classTarget, chance, checkSight, onlyNearby, targetSelector);
     }
 
     @Override
-    protected AxisAlignedBB getTargetableArea(double targetDistance) {
-        return this.goalOwner.getBoundingBox().grow(targetDistance, targetDistance, targetDistance);
+    protected AABB getTargetSearchArea(double targetDistance) {
+        return this.mob.getBoundingBox().inflate(targetDistance, targetDistance, targetDistance);
     }
 
-    public boolean shouldExecute() {
-        if (goalOwner instanceof EntitySeaSerpent && (((EntitySeaSerpent) goalOwner).isJumpingOutOfWater() || !goalOwner.isInWater())) {
+    public boolean canUse() {
+        if (mob instanceof EntitySeaSerpent && (((EntitySeaSerpent) mob).isJumpingOutOfWater() || !mob.isInWater())) {
             return false;
         }
-        return super.shouldExecute();
+        return super.canUse();
     }
 
 }

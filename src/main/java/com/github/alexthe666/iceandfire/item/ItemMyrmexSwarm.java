@@ -8,23 +8,23 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.EntityMyrmexSwarmer;
 import com.github.alexthe666.iceandfire.entity.IafEntityRegistry;
 
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.Hand;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.Level;
 
 public class ItemMyrmexSwarm extends Item {
     private boolean jungle;
 
     public ItemMyrmexSwarm(boolean jungle) {
-        super(new Item.Properties().group(IceAndFire.TAB_ITEMS).maxStackSize(1));
+        super(new Item.Properties().tab(IceAndFire.TAB_ITEMS).stacksTo(1));
         if (jungle) {
             this.setRegistryName(IceAndFire.MODID, "myrmex_jungle_swarm");
         } else {
@@ -34,32 +34,32 @@ public class ItemMyrmexSwarm extends Item {
     }
 
     @Override
-    public ActionResult<ItemStack> onItemRightClick(World worldIn, PlayerEntity playerIn, Hand hand) {
-        ItemStack itemStackIn = playerIn.getHeldItem(hand);
-        playerIn.setActiveHand(hand);
-        playerIn.swingArm(hand);
+    public InteractionResultHolder<ItemStack> use(Level worldIn, Player playerIn, InteractionHand hand) {
+        ItemStack itemStackIn = playerIn.getItemInHand(hand);
+        playerIn.startUsingItem(hand);
+        playerIn.swing(hand);
         if (!playerIn.isCreative()) {
             itemStackIn.shrink(1);
-            playerIn.getCooldownTracker().setCooldown(this, 20);
+            playerIn.getCooldowns().addCooldown(this, 20);
         }
         for (int i = 0; i < 5; i++) {
             EntityMyrmexSwarmer myrmex = new EntityMyrmexSwarmer(IafEntityRegistry.MYRMEX_SWARMER, worldIn);
-            myrmex.setPosition(playerIn.getPosX(), playerIn.getPosY(), playerIn.getPosZ());
+            myrmex.setPos(playerIn.getX(), playerIn.getY(), playerIn.getZ());
             myrmex.setJungleVariant(jungle);
             myrmex.setSummonedBy(playerIn);
             myrmex.setFlying(true);
-            if (!worldIn.isRemote) {
-                worldIn.addEntity(myrmex);
+            if (!worldIn.isClientSide) {
+                worldIn.addFreshEntity(myrmex);
             }
         }
-        playerIn.getCooldownTracker().setCooldown(this, 1800);
-        return new ActionResult<ItemStack>(ActionResultType.PASS, itemStackIn);
+        playerIn.getCooldowns().addCooldown(this, 1800);
+        return new InteractionResultHolder<ItemStack>(InteractionResult.PASS, itemStackIn);
     }
 
     @Override
-    public void addInformation(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
-        tooltip.add(new TranslationTextComponent("item.iceandfire.legendary_weapon.desc").mergeStyle(TextFormatting.GRAY));
-        tooltip.add(new TranslationTextComponent("item.iceandfire.myrmex_swarm.desc_0").mergeStyle(TextFormatting.GRAY));
-        tooltip.add(new TranslationTextComponent("item.iceandfire.myrmex_swarm.desc_1").mergeStyle(TextFormatting.GRAY));
+    public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> tooltip, TooltipFlag flagIn) {
+        tooltip.add(new TranslatableComponent("item.iceandfire.legendary_weapon.desc").withStyle(ChatFormatting.GRAY));
+        tooltip.add(new TranslatableComponent("item.iceandfire.myrmex_swarm.desc_0").withStyle(ChatFormatting.GRAY));
+        tooltip.add(new TranslatableComponent("item.iceandfire.myrmex_swarm.desc_1").withStyle(ChatFormatting.GRAY));
     }
 }

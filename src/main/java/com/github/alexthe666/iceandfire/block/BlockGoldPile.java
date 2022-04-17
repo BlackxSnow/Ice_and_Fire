@@ -4,55 +4,55 @@ import javax.annotation.Nullable;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.material.Material;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItemUseContext;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.pathfinding.PathType;
-import net.minecraft.state.IntegerProperty;
-import net.minecraft.state.StateContainer;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.Direction;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.BlockRayTraceResult;
-import net.minecraft.util.math.shapes.ISelectionContext;
-import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.util.math.shapes.VoxelShapes;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.IWorldReader;
-import net.minecraft.world.World;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.pathfinder.PathComputationType;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.Level;
 
-import net.minecraft.block.AbstractBlock.Properties;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
 public class BlockGoldPile extends Block {
     public static final IntegerProperty LAYERS = IntegerProperty.create("layers", 1, 8);
-    protected static final VoxelShape[] SHAPES = new VoxelShape[]{VoxelShapes.empty(), Block.makeCuboidShape(0.0D, 0.0D, 0.0D, 16.0D, 2.0D, 16.0D), Block.makeCuboidShape(0.0D, 0.0D, 0.0D, 16.0D, 4.0D, 16.0D), Block.makeCuboidShape(0.0D, 0.0D, 0.0D, 16.0D, 6.0D, 16.0D), Block.makeCuboidShape(0.0D, 0.0D, 0.0D, 16.0D, 8.0D, 16.0D), Block.makeCuboidShape(0.0D, 0.0D, 0.0D, 16.0D, 10.0D, 16.0D), Block.makeCuboidShape(0.0D, 0.0D, 0.0D, 16.0D, 12.0D, 16.0D), Block.makeCuboidShape(0.0D, 0.0D, 0.0D, 16.0D, 14.0D, 16.0D), Block.makeCuboidShape(0.0D, 0.0D, 0.0D, 16.0D, 16.0D, 16.0D)};
+    protected static final VoxelShape[] SHAPES = new VoxelShape[]{Shapes.empty(), Block.box(0.0D, 0.0D, 0.0D, 16.0D, 2.0D, 16.0D), Block.box(0.0D, 0.0D, 0.0D, 16.0D, 4.0D, 16.0D), Block.box(0.0D, 0.0D, 0.0D, 16.0D, 6.0D, 16.0D), Block.box(0.0D, 0.0D, 0.0D, 16.0D, 8.0D, 16.0D), Block.box(0.0D, 0.0D, 0.0D, 16.0D, 10.0D, 16.0D), Block.box(0.0D, 0.0D, 0.0D, 16.0D, 12.0D, 16.0D), Block.box(0.0D, 0.0D, 0.0D, 16.0D, 14.0D, 16.0D), Block.box(0.0D, 0.0D, 0.0D, 16.0D, 16.0D, 16.0D)};
     public Item itemBlock;
 
     public BlockGoldPile(String name) {
         super(
     		Properties
-    			.create(Material.EARTH)
-    			.hardnessAndResistance(0.3F, 1)
-    			.tickRandomly()
+    			.of(Material.DIRT)
+    			.strength(0.3F, 1)
+    			.randomTicks()
     			.sound(IafBlockRegistry.SOUND_TYPE_GOLD)
 		);
 
-        this.setDefaultState(this.stateContainer.getBaseState().with(LAYERS, Integer.valueOf(1)));
+        this.registerDefaultState(this.stateDefinition.any().setValue(LAYERS, Integer.valueOf(1)));
         setRegistryName(IceAndFire.MODID, name);
     }
 
-    public boolean allowsMovement(BlockState state, IBlockReader worldIn, BlockPos pos, PathType type) {
+    public boolean isPathfindable(BlockState state, BlockGetter worldIn, BlockPos pos, PathComputationType type) {
         switch (type) {
             case LAND:
-                return state.get(LAYERS) < 5;
+                return state.getValue(LAYERS) < 5;
             case WATER:
                 return false;
             case AIR:
@@ -62,24 +62,24 @@ public class BlockGoldPile extends Block {
         }
     }
 
-    public VoxelShape getShape(BlockState state, IBlockReader worldIn, BlockPos pos, ISelectionContext context) {
-        return SHAPES[state.get(LAYERS)];
+    public VoxelShape getShape(BlockState state, BlockGetter worldIn, BlockPos pos, CollisionContext context) {
+        return SHAPES[state.getValue(LAYERS)];
     }
 
-    public VoxelShape getCollisionShape(BlockState state, IBlockReader worldIn, BlockPos pos, ISelectionContext context) {
-        return SHAPES[state.get(LAYERS) - 1];
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter worldIn, BlockPos pos, CollisionContext context) {
+        return SHAPES[state.getValue(LAYERS) - 1];
     }
 
-    public boolean isTransparent(BlockState state) {
+    public boolean useShapeForLightOcclusion(BlockState state) {
         return true;
     }
 
-    public boolean isValidPosition(BlockState state, IWorldReader worldIn, BlockPos pos) {
-        BlockState blockstate = worldIn.getBlockState(pos.down());
+    public boolean canSurvive(BlockState state, LevelReader worldIn, BlockPos pos) {
+        BlockState blockstate = worldIn.getBlockState(pos.below());
         Block block = blockstate.getBlock();
         if (block != Blocks.ICE && block != Blocks.PACKED_ICE && block != Blocks.BARRIER) {
             if (block != Blocks.HONEY_BLOCK && block != Blocks.SOUL_SAND) {
-                return Block.doesSideFillSquare(blockstate.getCollisionShapeUncached(worldIn, pos.down()), Direction.UP) || block instanceof BlockGoldPile && blockstate.get(LAYERS) == 8;
+                return Block.isFaceFull(blockstate.getCollisionShape(worldIn, pos.below()), Direction.UP) || block instanceof BlockGoldPile && blockstate.getValue(LAYERS) == 8;
             } else {
                 return true;
             }
@@ -93,51 +93,51 @@ public class BlockGoldPile extends Block {
         return false;
     }
 
-    public BlockState updatePostPlacement(BlockState stateIn, Direction facing, BlockState facingState, IWorld worldIn, BlockPos currentPos, BlockPos facingPos) {
-        return !stateIn.isValidPosition(worldIn, currentPos) ? Blocks.AIR.getDefaultState() : super.updatePostPlacement(stateIn, facing, facingState, worldIn, currentPos, facingPos);
+    public BlockState updateShape(BlockState stateIn, Direction facing, BlockState facingState, LevelAccessor worldIn, BlockPos currentPos, BlockPos facingPos) {
+        return !stateIn.canSurvive(worldIn, currentPos) ? Blocks.AIR.defaultBlockState() : super.updateShape(stateIn, facing, facingState, worldIn, currentPos, facingPos);
     }
 
 
     @Nullable
-    public BlockState getStateForPlacement(BlockItemUseContext context) {
-        BlockState blockstate = context.getWorld().getBlockState(context.getPos());
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        BlockState blockstate = context.getLevel().getBlockState(context.getClickedPos());
         if (blockstate.getBlock() == this) {
-            int i = blockstate.get(LAYERS);
-            return blockstate.with(LAYERS, Integer.valueOf(Math.min(8, i + 1)));
+            int i = blockstate.getValue(LAYERS);
+            return blockstate.setValue(LAYERS, Integer.valueOf(Math.min(8, i + 1)));
         } else {
             return super.getStateForPlacement(context);
         }
     }
 
-    protected void fillStateContainer(StateContainer.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(LAYERS);
     }
 
     @Override
-    public ActionResultType onBlockActivated(BlockState state, World worldIn, BlockPos pos, PlayerEntity playerIn, Hand handIn, BlockRayTraceResult resultIn) {
-        ItemStack item = playerIn.inventory.getCurrentItem();
+    public InteractionResult use(BlockState state, Level worldIn, BlockPos pos, Player playerIn, InteractionHand handIn, BlockHitResult resultIn) {
+        ItemStack item = playerIn.inventory.getSelected();
 
         if (!item.isEmpty()) {
             if (item.getItem() != null) {
-                if (item.getItem() == Item.getItemFromBlock(this)) {
+                if (item.getItem() == Item.byBlock(this)) {
                     if (!item.isEmpty()) {
-                        if (state.get(LAYERS) < 8) {
-                            worldIn.setBlockState(pos, state.with(LAYERS, state.get(LAYERS) + 1), 3);
+                        if (state.getValue(LAYERS) < 8) {
+                            worldIn.setBlock(pos, state.setValue(LAYERS, state.getValue(LAYERS) + 1), 3);
                             if (!playerIn.isCreative()) {
                                 item.shrink(1);
 
                                 if (item.isEmpty()) {
-                                    playerIn.inventory.setInventorySlotContents(playerIn.inventory.currentItem, ItemStack.EMPTY);
+                                    playerIn.inventory.setItem(playerIn.inventory.selected, ItemStack.EMPTY);
                                 } else {
-                                    playerIn.inventory.setInventorySlotContents(playerIn.inventory.currentItem, item);
+                                    playerIn.inventory.setItem(playerIn.inventory.selected, item);
                                 }
                             }
-                            return ActionResultType.SUCCESS;
+                            return InteractionResult.SUCCESS;
                         }
                     }
                 }
             }
         }
-        return ActionResultType.PASS;
+        return InteractionResult.PASS;
     }
 }

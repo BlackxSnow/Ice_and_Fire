@@ -5,31 +5,31 @@ import java.util.List;
 
 import com.github.alexthe666.iceandfire.entity.EntityDreadKnight;
 
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.passive.horse.AbstractHorseEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class DreadAIRideHorse extends Goal {
     private final EntityDreadKnight knight;
-    private AbstractHorseEntity horse;
+    private AbstractHorse horse;
 
     public DreadAIRideHorse(EntityDreadKnight knight) {
         this.knight = knight;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
-    public boolean shouldExecute() {
+    public boolean canUse() {
         if (this.knight.isPassenger()) {
             return false;
         } else {
-            List<AbstractHorseEntity> list = this.knight.world.getEntitiesWithinAABB(AbstractHorseEntity.class, this.knight.getBoundingBox().grow(16.0D, 7.0D, 16.0D));
+            List<AbstractHorse> list = this.knight.level.getEntitiesOfClass(AbstractHorse.class, this.knight.getBoundingBox().inflate(16.0D, 7.0D, 16.0D));
 
             if (list.isEmpty()) {
                 return false;
             } else {
-                for (AbstractHorseEntity entityirongolem : list) {
-                    if (!entityirongolem.isBeingRidden()) {
+                for (AbstractHorse entityirongolem : list) {
+                    if (!entityirongolem.isVehicle()) {
                         this.horse = entityirongolem;
                         break;
                     }
@@ -40,27 +40,27 @@ public class DreadAIRideHorse extends Goal {
         }
     }
 
-    public boolean shouldContinueExecuting() {
-        return !this.knight.isPassenger() && this.horse != null && !this.horse.isBeingRidden();
+    public boolean canContinueToUse() {
+        return !this.knight.isPassenger() && this.horse != null && !this.horse.isVehicle();
     }
 
-    public void startExecuting() {
-        this.horse.getNavigator().clearPath();
+    public void start() {
+        this.horse.getNavigation().stop();
     }
 
-    public void resetTask() {
+    public void stop() {
         this.horse = null;
-        this.knight.getNavigator().clearPath();
+        this.knight.getNavigation().stop();
     }
 
     public void tick() {
-        this.knight.getLookController().setLookPositionWithEntity(this.horse, 30.0F, 30.0F);
+        this.knight.getLookControl().setLookAt(this.horse, 30.0F, 30.0F);
 
-        this.knight.getNavigator().tryMoveToEntityLiving(this.horse, 1.2D);
+        this.knight.getNavigation().moveTo(this.horse, 1.2D);
 
-        if (this.knight.getDistanceSq(this.horse) < 4.0D) {
-            this.horse.setHorseTamed(true);
-            this.knight.getNavigator().clearPath();
+        if (this.knight.distanceToSqr(this.horse) < 4.0D) {
+            this.horse.setTamed(true);
+            this.knight.getNavigation().stop();
             this.knight.startRiding(horse);
         }
     }

@@ -1,15 +1,15 @@
 package com.github.alexthe666.iceandfire.client.gui.bestiary;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.widget.button.Button;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import net.minecraft.client.gui.widget.button.Button.IPressable;
+import net.minecraft.client.gui.components.Button.OnPress;
 
 @OnlyIn(Dist.CLIENT)
 public class ChangePageButton extends Button {
@@ -18,18 +18,18 @@ public class ChangePageButton extends Button {
     private int page;
     private int color;
 
-    public ChangePageButton(int x, int y, boolean right, int bookpage, int color, IPressable press) {
-        super(x, y, 23, 10, new StringTextComponent(""), press);
+    public ChangePageButton(int x, int y, boolean right, int bookpage, int color, OnPress press) {
+        super(x, y, 23, 10, new TextComponent(""), press);
         this.right = right;
         page = bookpage;
         this.color = color;
     }
 
     @Override
-    public void renderWidget(MatrixStack matrixStack,  int mouseX, int mouseY, float partial) {
+    public void renderButton(PoseStack matrixStack,  int mouseX, int mouseY, float partial) {
         if (this.active) {
             boolean flag = mouseX >= this.x && mouseY >= this.y && mouseX < this.x + this.width && mouseY < this.y + this.height;
-            Minecraft.getInstance().getTextureManager().bindTexture(new ResourceLocation("iceandfire:textures/gui/bestiary/widgets.png"));
+            Minecraft.getInstance().getTextureManager().bind(new ResourceLocation("iceandfire:textures/gui/bestiary/widgets.png"));
             int i = 0;
             int j = 64;
             if (flag) {

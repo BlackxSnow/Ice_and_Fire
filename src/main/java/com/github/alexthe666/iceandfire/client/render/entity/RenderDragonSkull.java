@@ -3,19 +3,19 @@ package com.github.alexthe666.iceandfire.client.render.entity;
 import com.github.alexthe666.citadel.client.model.TabulaModel;
 import com.github.alexthe666.iceandfire.entity.EntityDragonSkull;
 import com.github.alexthe666.iceandfire.enums.EnumDragonTextures;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
-import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EntityRendererManager;
-import net.minecraft.client.renderer.entity.model.SegmentedModel;
-import net.minecraft.client.renderer.model.ModelRenderer;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.model.ListModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.vector.Quaternion;
-import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.resources.ResourceLocation;
+import com.mojang.math.Quaternion;
+import com.mojang.math.Vector3f;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -32,7 +32,7 @@ public class RenderDragonSkull extends EntityRenderer<EntityDragonSkull> {
     private TabulaModel lightningDragonModel;
     private TabulaModel iceDragonModel;
 
-    public RenderDragonSkull(EntityRendererManager renderManager, SegmentedModel fireDragonModel, SegmentedModel iceDragonModel, SegmentedModel lightningDragonModel) {
+    public RenderDragonSkull(EntityRenderDispatcher renderManager, ListModel fireDragonModel, ListModel iceDragonModel, ListModel lightningDragonModel) {
         super(renderManager);
         growth_stages = new float[][]{growth_stage_1, growth_stage_2, growth_stage_3, growth_stage_4, growth_stage_5};
         this.fireDragonModel = (TabulaModel) fireDragonModel;
@@ -40,13 +40,13 @@ public class RenderDragonSkull extends EntityRenderer<EntityDragonSkull> {
         this.lightningDragonModel = (TabulaModel) lightningDragonModel;
     }
 
-    private static void setRotationAngles(ModelRenderer cube, float rotX, float rotY, float rotZ) {
-        cube.rotateAngleX = rotX;
-        cube.rotateAngleY = rotY;
-        cube.rotateAngleZ = rotZ;
+    private static void setRotationAngles(ModelPart cube, float rotX, float rotY, float rotZ) {
+        cube.xRot = rotX;
+        cube.yRot = rotY;
+        cube.zRot = rotZ;
     }
 
-    public void render(EntityDragonSkull entity, float entityYaw, float partialTicks, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn) {
+    public void render(EntityDragonSkull entity, float entityYaw, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn, int packedLightIn) {
         TabulaModel model;
         if (entity.getDragonType() == 2) {
             model = lightningDragonModel;
@@ -55,10 +55,10 @@ public class RenderDragonSkull extends EntityRenderer<EntityDragonSkull> {
         } else {
             model = fireDragonModel;
         }
-        IVertexBuilder ivertexbuilder = bufferIn.getBuffer(RenderType.getEntityTranslucent(getEntityTexture(entity)));
-        matrixStackIn.push();
-        matrixStackIn.rotate(new Quaternion(Vector3f.XP, -180, true));
-        matrixStackIn.rotate(new Quaternion(Vector3f.YN, 180 - entity.getYaw(), true));
+        VertexConsumer ivertexbuilder = bufferIn.getBuffer(RenderType.entityTranslucent(getTextureLocation(entity)));
+        matrixStackIn.pushPose();
+        matrixStackIn.mulPose(new Quaternion(Vector3f.XP, -180, true));
+        matrixStackIn.mulPose(new Quaternion(Vector3f.YN, 180 - entity.getYaw(), true));
         float f = 0.0625F;
         matrixStackIn.scale(1.0F,  1.0F, 1.0F);
         float size = getRenderSize(entity) / 3;
@@ -67,9 +67,9 @@ public class RenderDragonSkull extends EntityRenderer<EntityDragonSkull> {
         model.resetToDefaultPose();
         setRotationAngles(model.getCube("Head"), entity.isOnWall() ? (float) Math.toRadians(50F) : 0F, 0, 0);
         model.getCube("Head").render(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
-        matrixStackIn.pop();
+        matrixStackIn.popPose();
     }
-    public ResourceLocation getEntityTexture(EntityDragonSkull entity) {
+    public ResourceLocation getTextureLocation(EntityDragonSkull entity) {
         if (entity.getDragonType() == 2) {
             return EnumDragonTextures.getLightningDragonSkullTextures(entity);
         }

@@ -12,61 +12,61 @@ import com.github.alexthe666.iceandfire.entity.ai.MyrmexAISummonerHurtTarget;
 import com.github.alexthe666.iceandfire.entity.ai.MyrmexAIWander;
 
 import com.github.alexthe666.iceandfire.pathfinding.raycoms.AdvancedPathNavigate;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.ai.goal.HurtByTargetGoal;
-import net.minecraft.entity.ai.goal.LookAtGoal;
-import net.minecraft.entity.ai.goal.LookRandomlyGoal;
-import net.minecraft.entity.ai.goal.SwimGoal;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.pathfinding.FlyingPathNavigator;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 
 import com.github.alexthe666.iceandfire.entity.EntityMyrmexRoyal.AIFlyAtTarget;
 import com.github.alexthe666.iceandfire.entity.EntityMyrmexRoyal.AIFlyRandom;
 
 public class EntityMyrmexSwarmer extends EntityMyrmexRoyal {
 
-    private static final DataParameter<Optional<UUID>> SUMMONER_ID = EntityDataManager.createKey(EntityMyrmexSwarmer.class, DataSerializers.OPTIONAL_UNIQUE_ID);
-    private static final DataParameter<Integer> TICKS_ALIVE = EntityDataManager.createKey(EntityMyrmexSwarmer.class, DataSerializers.VARINT);
+    private static final EntityDataAccessor<Optional<UUID>> SUMMONER_ID = SynchedEntityData.defineId(EntityMyrmexSwarmer.class, EntityDataSerializers.OPTIONAL_UUID);
+    private static final EntityDataAccessor<Integer> TICKS_ALIVE = SynchedEntityData.defineId(EntityMyrmexSwarmer.class, EntityDataSerializers.INT);
 
-    public EntityMyrmexSwarmer(EntityType type, World worldIn) {
+    public EntityMyrmexSwarmer(EntityType type, Level worldIn) {
         super(type, worldIn);
-        this.moveController = new EntityMyrmexRoyal.FlyMoveHelper(this);
-        this.navigator = createNavigator(world, AdvancedPathNavigate.MovementType.FLYING);
+        this.moveControl = new EntityMyrmexRoyal.FlyMoveHelper(this);
+        this.navigation = createNavigator(level, AdvancedPathNavigate.MovementType.FLYING);
         switchNavigator(false);
     }
 
-    public static AttributeModifierMap.MutableAttribute bakeAttributes() {
-        return MobEntity.func_233666_p_()
+    public static AttributeSupplier.Builder bakeAttributes() {
+        return Mob.createMobAttributes()
                 //HEALTH
-                .createMutableAttribute(Attributes.MAX_HEALTH, 5)
+                .add(Attributes.MAX_HEALTH, 5)
                 //SPEED
-                .createMutableAttribute(Attributes.MOVEMENT_SPEED, 0.35D)
+                .add(Attributes.MOVEMENT_SPEED, 0.35D)
                 //ATTACK
-                .createMutableAttribute(Attributes.ATTACK_DAMAGE, 2)
+                .add(Attributes.ATTACK_DAMAGE, 2)
                 //FOLLOW RANGE
-                .createMutableAttribute(Attributes.FOLLOW_RANGE, 64.0D)
+                .add(Attributes.FOLLOW_RANGE, 64.0D)
                 //ARMOR
-                .createMutableAttribute(Attributes.ARMOR, 0D);
+                .add(Attributes.ARMOR, 0D);
     }
 
-    protected int getExperiencePoints(PlayerEntity player) {
+    protected int getExperienceReward(Player player) {
         return 0;
     }
 
@@ -78,64 +78,64 @@ public class EntityMyrmexSwarmer extends EntityMyrmexRoyal {
     }
 
     protected void registerGoals() {
-        this.goalSelector.addGoal(0, new SwimGoal(this));
+        this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new MyrmexAIFollowSummoner(this, 1.0D, 10.0F, 5.0F));
         this.goalSelector.addGoal(2, new AIFlyAtTarget());
         this.goalSelector.addGoal(3, new AIFlyRandom());
         this.goalSelector.addGoal(4, new EntityAIAttackMeleeNoCooldown(this, 1.0D, true));
         this.goalSelector.addGoal(5, new MyrmexAIWander(this, 1D));
-        this.goalSelector.addGoal(6, new LookAtGoal(this, PlayerEntity.class, 6.0F));
-        this.goalSelector.addGoal(7, new LookRandomlyGoal(this));
+        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new MyrmexAISummonerHurtByTarget(this));
         this.targetSelector.addGoal(3, new MyrmexAISummonerHurtTarget(this));
     }
 
-    protected void collideWithEntity(Entity entityIn) {
+    protected void doPush(Entity entityIn) {
         if (entityIn instanceof EntityMyrmexSwarmer) {
-            super.collideWithEntity(entityIn);
+            super.doPush(entityIn);
         }
     }
 
-    protected void updateFallState(double y, boolean onGroundIn, BlockState state, BlockPos pos) {
+    protected void checkFallDamage(double y, boolean onGroundIn, BlockState state, BlockPos pos) {
     }
 
-    protected void registerData() {
-        super.registerData();
-        this.dataManager.register(SUMMONER_ID, Optional.empty());
-        this.dataManager.register(TICKS_ALIVE, 0);
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(SUMMONER_ID, Optional.empty());
+        this.entityData.define(TICKS_ALIVE, 0);
     }
 
     @Nullable
     public LivingEntity getSummoner() {
         try {
             UUID uuid = this.getSummonerUUID();
-            return uuid == null ? null : this.world.getPlayerByUuid(uuid);
+            return uuid == null ? null : this.level.getPlayerByUUID(uuid);
         } catch (IllegalArgumentException var2) {
             return null;
         }
     }
 
-    public boolean isOnSameTeam(Entity entityIn) {
+    public boolean isAlliedTo(Entity entityIn) {
         if (entityIn == null) {
             return false;
         }
         if (this.getSummonerUUID() == null || entityIn instanceof EntityMyrmexSwarmer && ((EntityMyrmexSwarmer) entityIn).getSummonerUUID() == null) {
             return false;
         }
-        if (entityIn instanceof TameableEntity) {
-            UUID ownerID = ((TameableEntity) entityIn).getOwnerId();
+        if (entityIn instanceof TamableAnimal) {
+            UUID ownerID = ((TamableAnimal) entityIn).getOwnerUUID();
             return ownerID != null && ownerID.equals(this.getSummonerUUID());
         }
-        return entityIn.getUniqueID().equals(this.getSummonerUUID()) || entityIn instanceof EntityMyrmexSwarmer && ((EntityMyrmexSwarmer) entityIn).getSummonerUUID() != null && ((EntityMyrmexSwarmer) entityIn).getSummonerUUID().equals(this.getSummonerUUID());
+        return entityIn.getUUID().equals(this.getSummonerUUID()) || entityIn instanceof EntityMyrmexSwarmer && ((EntityMyrmexSwarmer) entityIn).getSummonerUUID() != null && ((EntityMyrmexSwarmer) entityIn).getSummonerUUID().equals(this.getSummonerUUID());
     }
 
     public void setSummonerID(@Nullable UUID uuid) {
-        this.dataManager.set(SUMMONER_ID, Optional.ofNullable(uuid));
+        this.entityData.set(SUMMONER_ID, Optional.ofNullable(uuid));
     }
 
-    public void writeAdditional(CompoundNBT compound) {
-        super.writeAdditional(compound);
+    public void addAdditionalSaveData(CompoundTag compound) {
+        super.addAdditionalSaveData(compound);
         if (this.getSummonerUUID() == null) {
             compound.putString("SummonerUUID", "");
         } else {
@@ -145,10 +145,10 @@ public class EntityMyrmexSwarmer extends EntityMyrmexRoyal {
 
     }
 
-    public void readAdditional(CompoundNBT compound) {
-        super.readAdditional(compound);
+    public void readAdditionalSaveData(CompoundTag compound) {
+        super.readAdditionalSaveData(compound);
         String s = "";
-        if (compound.hasUniqueId("SummonerUUID")) {
+        if (compound.hasUUID("SummonerUUID")) {
             s = compound.getString("SummonerUUID");
         }
         if (!s.isEmpty()) {
@@ -160,59 +160,59 @@ public class EntityMyrmexSwarmer extends EntityMyrmexRoyal {
         this.setTicksAlive(compound.getInt("SummonTicks"));
     }
 
-    public void setSummonedBy(PlayerEntity player) {
-        this.setSummonerID(player.getUniqueID());
+    public void setSummonedBy(Player player) {
+        this.setSummonerID(player.getUUID());
     }
 
     @Nullable
     public UUID getSummonerUUID() {
-        return (UUID) ((Optional) this.dataManager.get(SUMMONER_ID)).orElse(null);
+        return (UUID) ((Optional) this.entityData.get(SUMMONER_ID)).orElse(null);
     }
 
     public int getTicksAlive() {
-        return this.dataManager.get(TICKS_ALIVE).intValue();
+        return this.entityData.get(TICKS_ALIVE).intValue();
     }
 
     public void setTicksAlive(int ticks) {
-        this.dataManager.set(TICKS_ALIVE, ticks);
+        this.entityData.set(TICKS_ALIVE, ticks);
     }
 
-    public void livingTick() {
-        super.livingTick();
+    public void aiStep() {
+        super.aiStep();
         setFlying(true);
         boolean flying = this.isFlying() && !this.onGround;
         setTicksAlive(getTicksAlive() + 1);
         if (flying) {
-            this.setMotion(this.getMotion().add(0, -0.08D, 0));
-            if (this.moveController.getY() > this.getPosY()) {
-                this.setMotion(this.getMotion().add(0, 0.08D, 0));
+            this.setDeltaMovement(this.getDeltaMovement().add(0, -0.08D, 0));
+            if (this.moveControl.getWantedY() > this.getY()) {
+                this.setDeltaMovement(this.getDeltaMovement().add(0, 0.08D, 0));
             }
         }
         if (this.onGround) {
-            this.setMotion(this.getMotion().add(0, 0.2D, 0));
+            this.setDeltaMovement(this.getDeltaMovement().add(0, 0.2D, 0));
         }
-        if (this.getAttackTarget() != null) {
-            this.moveController.setMoveTo(this.getAttackTarget().getPosX(), this.getAttackTarget().getBoundingBox().minY, this.getAttackTarget().getPosZ(), 1.0F);
-            if (this.getAttackBounds().intersects(this.getAttackTarget().getBoundingBox())) {
-                this.setAnimation(rand.nextBoolean() ? ANIMATION_BITE : ANIMATION_STING);
+        if (this.getTarget() != null) {
+            this.moveControl.setWantedPosition(this.getTarget().getX(), this.getTarget().getBoundingBox().minY, this.getTarget().getZ(), 1.0F);
+            if (this.getAttackBounds().intersects(this.getTarget().getBoundingBox())) {
+                this.setAnimation(random.nextBoolean() ? ANIMATION_BITE : ANIMATION_STING);
             }
         }
         if (this.getTicksAlive() > 1800) {
-            this.onKillCommand();
+            this.kill();
         }
-        if (this.getAnimation() == ANIMATION_BITE && this.getAttackTarget() != null && this.getAnimationTick() == 6) {
+        if (this.getAnimation() == ANIMATION_BITE && this.getTarget() != null && this.getAnimationTick() == 6) {
             this.playBiteSound();
-            double dist = this.getDistanceSq(this.getAttackTarget());
+            double dist = this.distanceToSqr(this.getTarget());
             if (dist < attackDistance()) {
-                this.getAttackTarget().attackEntityFrom(DamageSource.causeMobDamage(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue()));
+                this.getTarget().hurt(DamageSource.mobAttack(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue()));
             }
         }
-        if (this.getAnimation() == ANIMATION_STING && this.getAttackTarget() != null && this.getAnimationTick() == 6) {
+        if (this.getAnimation() == ANIMATION_STING && this.getTarget() != null && this.getAnimationTick() == 6) {
             this.playStingSound();
-            double dist = this.getDistanceSq(this.getAttackTarget());
+            double dist = this.distanceToSqr(this.getTarget());
             if (dist < attackDistance()) {
-                this.getAttackTarget().attackEntityFrom(DamageSource.causeMobDamage(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue() * 2));
-                this.getAttackTarget().addPotionEffect(new EffectInstance(Effects.POISON, 70, 1));
+                this.getTarget().hurt(DamageSource.mobAttack(this), ((int) this.getAttribute(Attributes.ATTACK_DAMAGE).getValue() * 2));
+                this.getTarget().addEffect(new MobEffectInstance(MobEffects.POISON, 70, 1));
             }
         }
     }
@@ -222,7 +222,7 @@ public class EntityMyrmexSwarmer extends EntityMyrmexRoyal {
     }
 
     @Nullable
-    protected ResourceLocation getLootTable() {
+    protected ResourceLocation getDefaultLootTable() {
         return null;
     }
 
@@ -245,6 +245,6 @@ public class EntityMyrmexSwarmer extends EntityMyrmexRoyal {
     }
 
     public boolean shouldAttackEntity(LivingEntity attacker, LivingEntity LivingEntity) {
-        return !isOnSameTeam(attacker);
+        return !isAlliedTo(attacker);
     }
 }

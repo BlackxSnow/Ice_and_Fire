@@ -1,20 +1,20 @@
 package com.github.alexthe666.iceandfire.entity.ai;
 
-import net.minecraft.entity.CreatureEntity;
-import net.minecraft.entity.ai.goal.RandomWalkingGoal;
-import net.minecraft.entity.passive.TameableEntity;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
+import net.minecraft.world.entity.TamableAnimal;
 
-public class HippocampusAIWander extends RandomWalkingGoal {
+public class HippocampusAIWander extends RandomStrollGoal {
 
-    public HippocampusAIWander(CreatureEntity creatureIn, double speedIn) {
+    public HippocampusAIWander(PathfinderMob creatureIn, double speedIn) {
         super(creatureIn, speedIn);
     }
 
-    public boolean shouldExecute() {
-        return !(creature instanceof TameableEntity && ((TameableEntity) creature).isQueuedToSit()) && !this.creature.isInWater() && super.shouldExecute();
+    public boolean canUse() {
+        return !(mob instanceof TamableAnimal && ((TamableAnimal) mob).isOrderedToSit()) && !this.mob.isInWater() && super.canUse();
     }
 
-    public boolean shouldContinueExecuting() {
-        return !(creature instanceof TameableEntity && ((TameableEntity) creature).isQueuedToSit()) && !this.creature.isInWater() && super.shouldContinueExecuting();
+    public boolean canContinueToUse() {
+        return !(mob instanceof TamableAnimal && ((TamableAnimal) mob).isOrderedToSit()) && !this.mob.isInWater() && super.canContinueToUse();
     }
 }

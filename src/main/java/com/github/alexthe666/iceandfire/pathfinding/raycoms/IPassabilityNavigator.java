@@ -1,7 +1,7 @@
 package com.github.alexthe666.iceandfire.pathfinding.raycoms;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.BlockPos;
 
 public interface IPassabilityNavigator {
 

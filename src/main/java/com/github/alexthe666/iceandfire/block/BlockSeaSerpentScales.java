@@ -6,34 +6,34 @@ import javax.annotation.Nullable;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.ToolType;
 
-import net.minecraft.block.AbstractBlock.Properties;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
 public class BlockSeaSerpentScales extends Block {
-    TextFormatting color;
+    ChatFormatting color;
     String name;
 
-    public BlockSeaSerpentScales(String name, TextFormatting color) {
+    public BlockSeaSerpentScales(String name, ChatFormatting color) {
         super(
     		Properties
-    			.create(Material.ROCK)
-    			.hardnessAndResistance(30F, 500F)
+    			.of(Material.STONE)
+    			.strength(30F, 500F)
     			.sound(SoundType.STONE)
     			.harvestTool(ToolType.PICKAXE)
     			.harvestLevel(2)
-    			.setRequiresTool()
+    			.requiresCorrectToolForDrops()
 		);
 
         this.color = color;
@@ -44,7 +44,7 @@ public class BlockSeaSerpentScales extends Block {
 
     @Override
     @OnlyIn(Dist.CLIENT)
-    public void addInformation(ItemStack stack, @Nullable IBlockReader worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
-        tooltip.add(new TranslationTextComponent("sea_serpent." + name).mergeStyle(color));
+    public void appendHoverText(ItemStack stack, @Nullable BlockGetter worldIn, List<Component> tooltip, TooltipFlag flagIn) {
+        tooltip.add(new TranslatableComponent("sea_serpent." + name).withStyle(color));
     }
 }

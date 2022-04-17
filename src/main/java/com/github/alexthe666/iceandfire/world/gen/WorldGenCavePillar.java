@@ -2,8 +2,8 @@ package com.github.alexthe666.iceandfire.world.gen;
 
 import java.util.Random;
 
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 
 public class WorldGenCavePillar {
     private boolean ice;
@@ -12,7 +12,7 @@ public class WorldGenCavePillar {
         this.ice = ice;
     }
 
-    public boolean generate(World worldIn, Random rand, BlockPos position) {
+    public boolean generate(Level worldIn, Random rand, BlockPos position) {
         int height = 3 + rand.nextInt(3);
 
         return true;

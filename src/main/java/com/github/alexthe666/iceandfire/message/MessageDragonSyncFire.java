@@ -5,9 +5,9 @@ import java.util.function.Supplier;
 import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.EntityDragonBase;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -30,11 +30,11 @@ public class MessageDragonSyncFire {
     public MessageDragonSyncFire() {
     }
 
-    public static MessageDragonSyncFire read(PacketBuffer buf) {
+    public static MessageDragonSyncFire read(FriendlyByteBuf buf) {
         return new MessageDragonSyncFire(buf.readInt(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readInt());
     }
 
-    public static void write(MessageDragonSyncFire message, PacketBuffer buf) {
+    public static void write(MessageDragonSyncFire message, FriendlyByteBuf buf) {
         buf.writeInt(message.dragonId);
         buf.writeDouble(message.posX);
         buf.writeDouble(message.posY);
@@ -48,13 +48,13 @@ public class MessageDragonSyncFire {
 
         public static void handle(MessageDragonSyncFire message, Supplier<NetworkEvent.Context> context) {
             context.get().setPacketHandled(true);
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             if(context.get().getDirection().getReceptionSide() == LogicalSide.CLIENT){
                 player = IceAndFire.PROXY.getClientSidePlayer();
             }
             if (player != null) {
-                if (player.world != null) {
-                    Entity entity = player.world.getEntityByID(message.dragonId);
+                if (player.level != null) {
+                    Entity entity = player.level.getEntity(message.dragonId);
                     if (entity != null && entity instanceof EntityDragonBase) {
                         EntityDragonBase dragon = (EntityDragonBase) entity;
                         dragon.stimulateFire(message.posX, message.posY, message.posZ, message.syncType);

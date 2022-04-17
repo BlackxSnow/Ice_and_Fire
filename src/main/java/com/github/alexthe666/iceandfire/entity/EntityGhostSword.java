@@ -5,51 +5,51 @@ import java.util.List;
 import com.google.common.collect.Lists;
 
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.entity.projectile.AbstractArrowEntity;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.IPacket;
-import net.minecraft.network.play.server.SChangeGameStatePacket;
-import net.minecraft.particles.ParticleTypes;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.Hand;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.EntityRayTraceResult;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RayTraceContext;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.network.FMLPlayMessages;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class EntityGhostSword  extends AbstractArrowEntity {
+public class EntityGhostSword  extends AbstractArrow {
 
-    public EntityGhostSword(EntityType type, World worldIn) {
+    public EntityGhostSword(EntityType type, Level worldIn) {
         super(type, worldIn);
-        this.setDamage(9F);
+        this.setBaseDamage(9F);
     }
 
-    public EntityGhostSword(EntityType type, World worldIn, double x, double y, double z, float r, float g, float b) {
+    public EntityGhostSword(EntityType type, Level worldIn, double x, double y, double z, float r, float g, float b) {
         this(type, worldIn);
-        this.setPosition(x, y, z);
-        this.setDamage(9F);
+        this.setPos(x, y, z);
+        this.setBaseDamage(9F);
     }
 
-    public EntityGhostSword(EntityType type, World worldIn, LivingEntity shooter, double dmg) {
+    public EntityGhostSword(EntityType type, Level worldIn, LivingEntity shooter, double dmg) {
         super(type, shooter, worldIn);
-        this.setDamage(dmg);
+        this.setBaseDamage(dmg);
     }
 
-    public EntityGhostSword(FMLPlayMessages.SpawnEntity spawnEntity, World worldIn) {
+    public EntityGhostSword(FMLPlayMessages.SpawnEntity spawnEntity, Level worldIn) {
         this(IafEntityRegistry.GHOST_SWORD, worldIn);
     }
 
@@ -58,60 +58,60 @@ public class EntityGhostSword  extends AbstractArrowEntity {
     }
 
     @Override
-    protected void registerData() {
-        super.registerData();
+    protected void defineSynchedData() {
+        super.defineSynchedData();
     }
 
     public void tick() {
         super.tick();
-        noClip = true;
-        float sqrt = MathHelper.sqrt(this.getMotion().x * this.getMotion().x + this.getMotion().z * this.getMotion().z);
-        if ((sqrt < 0.1F) && this.ticksExisted > 200) {
+        noPhysics = true;
+        float sqrt = Mth.sqrt(this.getDeltaMovement().x * this.getDeltaMovement().x + this.getDeltaMovement().z * this.getDeltaMovement().z);
+        if ((sqrt < 0.1F) && this.tickCount > 200) {
             this.remove();
         }
         double d0 = 0;
         double d1 = 0.0D;
         double d2 = 0.01D;
-        double x = this.getPosX() + (double) (this.rand.nextFloat() * this.getWidth() * 2.0F) - (double) this.getWidth();
-        double y = this.getPosY() + (double) (this.rand.nextFloat() * this.getHeight()) - (double) this.getHeight();
-        double z = this.getPosZ() + (double) (this.rand.nextFloat() * this.getWidth() * 2.0F) - (double) this.getWidth();
-        float f = (this.getWidth() + this.getHeight() + this.getWidth()) * 0.333F + 0.5F;
+        double x = this.getX() + (double) (this.random.nextFloat() * this.getBbWidth() * 2.0F) - (double) this.getBbWidth();
+        double y = this.getY() + (double) (this.random.nextFloat() * this.getBbHeight()) - (double) this.getBbHeight();
+        double z = this.getZ() + (double) (this.random.nextFloat() * this.getBbWidth() * 2.0F) - (double) this.getBbWidth();
+        float f = (this.getBbWidth() + this.getBbHeight() + this.getBbWidth()) * 0.333F + 0.5F;
         if (particleDistSq(x, y, z) < f * f) {
-            this.world.addParticle(ParticleTypes.SNEEZE, x, y + 0.5D, z, d0, d1, d2);
+            this.level.addParticle(ParticleTypes.SNEEZE, x, y + 0.5D, z, d0, d1, d2);
         }
-        Vector3d vector3d = this.getMotion();
-        float f3 = MathHelper.sqrt(horizontalMag(vector3d));
-        this.rotationYaw = (float)(MathHelper.atan2(vector3d.x, vector3d.z) * (double)(180F / (float)Math.PI));
-        this.rotationPitch = (float)(MathHelper.atan2(vector3d.y, (double)f3) * (double)(180F / (float)Math.PI));
-        this.prevRotationYaw = this.rotationYaw;
-        this.prevRotationPitch = this.rotationPitch;
-        Vector3d vector3d2 = this.getPositionVec();
-        Vector3d vector3d3 = vector3d2.add(vector3d);
-        RayTraceResult raytraceresult = this.world.rayTraceBlocks(new RayTraceContext(vector3d2, vector3d3, RayTraceContext.BlockMode.COLLIDER, RayTraceContext.FluidMode.NONE, this));
-        if (raytraceresult.getType() != RayTraceResult.Type.MISS) {
-            vector3d3 = raytraceresult.getHitVec();
+        Vec3 vector3d = this.getDeltaMovement();
+        float f3 = Mth.sqrt(getHorizontalDistanceSqr(vector3d));
+        this.yRot = (float)(Mth.atan2(vector3d.x, vector3d.z) * (double)(180F / (float)Math.PI));
+        this.xRot = (float)(Mth.atan2(vector3d.y, (double)f3) * (double)(180F / (float)Math.PI));
+        this.yRotO = this.yRot;
+        this.xRotO = this.xRot;
+        Vec3 vector3d2 = this.position();
+        Vec3 vector3d3 = vector3d2.add(vector3d);
+        HitResult raytraceresult = this.level.clip(new ClipContext(vector3d2, vector3d3, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+        if (raytraceresult.getType() != HitResult.Type.MISS) {
+            vector3d3 = raytraceresult.getLocation();
         }
         while(!this.removed) {
-            EntityRayTraceResult entityraytraceresult = this.rayTraceEntities(vector3d2, vector3d3);
+            EntityHitResult entityraytraceresult = this.findHitEntity(vector3d2, vector3d3);
             if (entityraytraceresult != null) {
                 raytraceresult = entityraytraceresult;
             }
 
-            if (raytraceresult != null && raytraceresult.getType() == RayTraceResult.Type.ENTITY) {
-                Entity entity = ((EntityRayTraceResult)raytraceresult).getEntity();
-                Entity entity1 = this.getShooter();
-                if (entity instanceof PlayerEntity && entity1 instanceof PlayerEntity && !((PlayerEntity)entity1).canAttackPlayer((PlayerEntity)entity)) {
+            if (raytraceresult != null && raytraceresult.getType() == HitResult.Type.ENTITY) {
+                Entity entity = ((EntityHitResult)raytraceresult).getEntity();
+                Entity entity1 = this.getOwner();
+                if (entity instanceof Player && entity1 instanceof Player && !((Player)entity1).canHarmPlayer((Player)entity)) {
                     raytraceresult = null;
                     entityraytraceresult = null;
                 }
             }
 
-            if (raytraceresult != null && raytraceresult.getType() != RayTraceResult.Type.MISS && !net.minecraftforge.event.ForgeEventFactory.onProjectileImpact(this, raytraceresult)) {
-                if(raytraceresult.getType() != RayTraceResult.Type.BLOCK){
-                    this.onImpact(raytraceresult);
+            if (raytraceresult != null && raytraceresult.getType() != HitResult.Type.MISS && !net.minecraftforge.event.ForgeEventFactory.onProjectileImpact(this, raytraceresult)) {
+                if(raytraceresult.getType() != HitResult.Type.BLOCK){
+                    this.onHit(raytraceresult);
 
                 }
-                this.isAirBorne = true;
+                this.hasImpulse = true;
             }
 
             if (entityraytraceresult == null || this.getPierceLevel() <= 0) {
@@ -123,46 +123,46 @@ public class EntityGhostSword  extends AbstractArrowEntity {
     }
 
     public double particleDistSq(double toX, double toY, double toZ) {
-        double d0 = getPosX() - toX;
-        double d1 = getPosY() - toY;
-        double d2 = getPosZ() - toZ;
+        double d0 = getX() - toX;
+        double d1 = getY() - toY;
+        double d2 = getZ() - toZ;
         return d0 * d0 + d1 * d1 + d2 * d2;
     }
 
 
     public void playSound(SoundEvent soundIn, float volume, float pitch) {
-        if (!this.isSilent() && soundIn != SoundEvents.ENTITY_ARROW_HIT && soundIn != SoundEvents.ENTITY_ARROW_HIT_PLAYER) {
-            this.world.playSound(null, this.getPosX(), this.getPosY(), this.getPosZ(), soundIn, this.getSoundCategory(), volume, pitch);
+        if (!this.isSilent() && soundIn != SoundEvents.ARROW_HIT && soundIn != SoundEvents.ARROW_HIT_PLAYER) {
+            this.level.playSound(null, this.getX(), this.getY(), this.getZ(), soundIn, this.getSoundSource(), volume, pitch);
         }
     }
 
-    protected void arrowHit(LivingEntity living) {
-        super.arrowHit(living);
-        if (living != null && (this.getShooter() == null || !living.isEntityEqual(this.getShooter()))) {
-            if (living instanceof PlayerEntity) {
-                this.damageShield((PlayerEntity) living, (float) this.getDamage());
+    protected void doPostHurtEffects(LivingEntity living) {
+        super.doPostHurtEffects(living);
+        if (living != null && (this.getOwner() == null || !living.is(this.getOwner()))) {
+            if (living instanceof Player) {
+                this.damageShield((Player) living, (float) this.getBaseDamage());
             }
         }
     }
 
-    protected void damageShield(PlayerEntity player, float damage) {
-        if (damage >= 3.0F && player.getActiveItemStack().getItem().isShield(player.getActiveItemStack(), player)) {
-            ItemStack copyBeforeUse = player.getActiveItemStack().copy();
-            int i = 1 + MathHelper.floor(damage);
-            player.getActiveItemStack().damageItem(i, player, (p_213833_1_) -> {
-                p_213833_1_.sendBreakAnimation(Hand.MAIN_HAND);
+    protected void damageShield(Player player, float damage) {
+        if (damage >= 3.0F && player.getUseItem().getItem().isShield(player.getUseItem(), player)) {
+            ItemStack copyBeforeUse = player.getUseItem().copy();
+            int i = 1 + Mth.floor(damage);
+            player.getUseItem().hurtAndBreak(i, player, (p_213833_1_) -> {
+                p_213833_1_.broadcastBreakEvent(InteractionHand.MAIN_HAND);
             });
-            if (player.getActiveItemStack().isEmpty()) {
-                Hand Hand = player.getActiveHand();
+            if (player.getUseItem().isEmpty()) {
+                InteractionHand Hand = player.getUsedItemHand();
                 net.minecraftforge.event.ForgeEventFactory.onPlayerDestroyItem(player, copyBeforeUse, Hand);
 
                 if (Hand == Hand.MAIN_HAND) {
-                    this.setItemStackToSlot(EquipmentSlotType.MAINHAND, ItemStack.EMPTY);
+                    this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
                 } else {
-                    this.setItemStackToSlot(EquipmentSlotType.OFFHAND, ItemStack.EMPTY);
+                    this.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
                 }
-                player.resetActiveHand();
-                this.playSound(SoundEvents.ITEM_SHIELD_BREAK, 0.8F, 0.8F + this.world.rand.nextFloat() * 0.4F);
+                player.stopUsingItem();
+                this.playSound(SoundEvents.SHIELD_BREAK, 0.8F, 0.8F + this.level.random.nextFloat() * 0.4F);
             }
         }
     }
@@ -176,17 +176,17 @@ public class EntityGhostSword  extends AbstractArrowEntity {
         return 1.0F;
     }
 
-    public boolean hasNoGravity() {
+    public boolean isNoGravity() {
         return true;
     }
 
     @Override
-    protected ItemStack getArrowStack() {
+    protected ItemStack getPickupItem() {
         return ItemStack.EMPTY;
     }
 
     @Override
-    public IPacket<?> createSpawnPacket() {
+    public Packet<?> getAddEntityPacket() {
         return NetworkHooks.getEntitySpawningPacket(this);
     }
 
@@ -194,14 +194,14 @@ public class EntityGhostSword  extends AbstractArrowEntity {
     private List<Entity> hitEntities;
     private int knockbackStrength;
 
-    public void setKnockbackStrength(int knockbackStrengthIn) {
+    public void setKnockback(int knockbackStrengthIn) {
         this.knockbackStrength = knockbackStrengthIn;
     }
 
-    protected void onEntityHit(EntityRayTraceResult result) {
+    protected void onHitEntity(EntityHitResult result) {
         Entity entity = result.getEntity();
-        float f = (float)this.getMotion().length();
-        int i = MathHelper.ceil(Math.max((double)f * this.getDamage(), 0.0D));
+        float f = (float)this.getDeltaMovement().length();
+        int i = Mth.ceil(Math.max((double)f * this.getBaseDamage(), 0.0D));
         if (this.getPierceLevel() > 0) {
             if (this.piercedEntities == null) {
                 this.piercedEntities = new IntOpenHashSet(5);
@@ -216,72 +216,72 @@ public class EntityGhostSword  extends AbstractArrowEntity {
                 return;
             }
 
-            this.piercedEntities.add(entity.getEntityId());
+            this.piercedEntities.add(entity.getId());
         }
 
-        if (this.getIsCritical()) {
-            i += this.rand.nextInt(i / 2 + 2);
+        if (this.isCritArrow()) {
+            i += this.random.nextInt(i / 2 + 2);
         }
 
-        Entity entity1 = this.getShooter();
+        Entity entity1 = this.getOwner();
         DamageSource damagesource = DamageSource.MAGIC;
         if (entity1 != null) {
             if (entity1 instanceof LivingEntity) {
                 if (entity1 instanceof LivingEntity) {
-                    damagesource = DamageSource.causeIndirectMagicDamage(this, entity1);
-                    ((LivingEntity) entity1).setLastAttackedEntity(entity);
+                    damagesource = DamageSource.indirectMagic(this, entity1);
+                    ((LivingEntity) entity1).setLastHurtMob(entity);
                 }
             }
         }
 
         boolean flag = entity.getType() == EntityType.ENDERMAN;
-        int j = entity.getFireTimer();
-        if (this.isBurning() && !flag) {
-            entity.setFire(5);
+        int j = entity.getRemainingFireTicks();
+        if (this.isOnFire() && !flag) {
+            entity.setSecondsOnFire(5);
         }
 
-        if (entity.attackEntityFrom(damagesource, (float)i)) {
+        if (entity.hurt(damagesource, (float)i)) {
             if (flag) {
                 return;
             }
 
             if (entity instanceof LivingEntity) {
                 LivingEntity livingentity = (LivingEntity)entity;
-                if (!this.world.isRemote && this.getPierceLevel() <= 0) {
+                if (!this.level.isClientSide && this.getPierceLevel() <= 0) {
                     //   livingentity.setArrowCountInEntity(livingentity.getArrowCountInEntity() + 1);
                 }
 
                 if (this.knockbackStrength > 0) {
-                    Vector3d vec3d = this.getMotion().mul(1.0D, 0.0D, 1.0D).normalize().scale((double)this.knockbackStrength * 0.6D);
-                    if (vec3d.lengthSquared() > 0.0D) {
-                        livingentity.addVelocity(vec3d.x, 0.1D, vec3d.z);
+                    Vec3 vec3d = this.getDeltaMovement().multiply(1.0D, 0.0D, 1.0D).normalize().scale((double)this.knockbackStrength * 0.6D);
+                    if (vec3d.lengthSqr() > 0.0D) {
+                        livingentity.push(vec3d.x, 0.1D, vec3d.z);
                     }
                 }
 
-                this.arrowHit(livingentity);
-                if (entity1 != null && livingentity != entity1 && livingentity instanceof PlayerEntity && entity1 instanceof ServerPlayerEntity) {
-                    ((ServerPlayerEntity)entity1).connection.sendPacket(new SChangeGameStatePacket(SChangeGameStatePacket.HIT_PLAYER_ARROW, 0.0F));
+                this.doPostHurtEffects(livingentity);
+                if (entity1 != null && livingentity != entity1 && livingentity instanceof Player && entity1 instanceof ServerPlayer) {
+                    ((ServerPlayer)entity1).connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.ARROW_HIT_PLAYER, 0.0F));
                 }
 
                 if (!entity.isAlive() && this.hitEntities != null) {
                     this.hitEntities.add(livingentity);
                 }
 
-                if (!this.world.isRemote && entity1 instanceof ServerPlayerEntity) {
-                    ServerPlayerEntity serverplayerentity = (ServerPlayerEntity)entity1;
+                if (!this.level.isClientSide && entity1 instanceof ServerPlayer) {
+                    ServerPlayer serverplayerentity = (ServerPlayer)entity1;
                 }
             }
 
-            this.playSound(this.getHitGroundSound(), 1.0F, 1.2F / (this.rand.nextFloat() * 0.2F + 0.9F));
+            this.playSound(this.getHitGroundSoundEvent(), 1.0F, 1.2F / (this.random.nextFloat() * 0.2F + 0.9F));
             if (this.getPierceLevel() <= 0) {
                 this.remove();
             }
         } else {
-            this.setMotion(this.getMotion().scale(-0.1D));
+            this.setDeltaMovement(this.getDeltaMovement().scale(-0.1D));
             //this.ticksInAir = 0;
-            if (!this.world.isRemote && this.getMotion().lengthSquared() < 1.0E-7D) {
-                if (this.pickupStatus == AbstractArrowEntity.PickupStatus.ALLOWED) {
-                    this.entityDropItem(this.getArrowStack(), 0.1F);
+            if (!this.level.isClientSide && this.getDeltaMovement().lengthSqr() < 1.0E-7D) {
+                if (this.pickup == AbstractArrow.Pickup.ALLOWED) {
+                    this.spawnAtLocation(this.getPickupItem(), 0.1F);
                 }
 
                 this.remove();

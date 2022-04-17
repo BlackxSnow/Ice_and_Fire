@@ -6,10 +6,10 @@ import com.github.alexthe666.citadel.server.message.PacketBufferUtils;
 import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.tile.TileEntityPodium;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -27,11 +27,11 @@ public class MessageUpdatePodium {
     public MessageUpdatePodium() {
     }
 
-    public static MessageUpdatePodium read(PacketBuffer buf) {
+    public static MessageUpdatePodium read(FriendlyByteBuf buf) {
         return new MessageUpdatePodium(buf.readLong(), PacketBufferUtils.readItemStack(buf));
     }
 
-    public static void write(MessageUpdatePodium message, PacketBuffer buf) {
+    public static void write(MessageUpdatePodium message, FriendlyByteBuf buf) {
         buf.writeLong(message.blockPos);
         PacketBufferUtils.writeItemStack(buf, message.heldStack);
     }
@@ -42,17 +42,17 @@ public class MessageUpdatePodium {
 
         public static void handle(MessageUpdatePodium message, Supplier<NetworkEvent.Context> context) {
             context.get().setPacketHandled(true);
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             if(context.get().getDirection().getReceptionSide() == LogicalSide.CLIENT){
                 player = IceAndFire.PROXY.getClientSidePlayer();
             }
             if (player != null) {
-                if (player.world != null) {
-                    BlockPos pos = BlockPos.fromLong(message.blockPos);
-                    if (player.world.getTileEntity(pos) != null) {
-                        if (player.world.getTileEntity(pos) instanceof TileEntityPodium) {
-                            TileEntityPodium podium = (TileEntityPodium) player.world.getTileEntity(pos);
-                            podium.setInventorySlotContents(0, message.heldStack);
+                if (player.level != null) {
+                    BlockPos pos = BlockPos.of(message.blockPos);
+                    if (player.level.getBlockEntity(pos) != null) {
+                        if (player.level.getBlockEntity(pos) instanceof TileEntityPodium) {
+                            TileEntityPodium podium = (TileEntityPodium) player.level.getBlockEntity(pos);
+                            podium.setItem(0, message.heldStack);
                         }
                     }
                 }

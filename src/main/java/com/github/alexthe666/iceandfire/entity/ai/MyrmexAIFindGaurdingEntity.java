@@ -11,11 +11,11 @@ import com.github.alexthe666.iceandfire.entity.EntityMyrmexBase;
 import com.github.alexthe666.iceandfire.entity.EntityMyrmexSoldier;
 import com.google.common.base.Predicate;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.goal.TargetGoal;
-import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.goal.target.TargetGoal;
+import net.minecraft.world.phys.AABB;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class MyrmexAIFindGaurdingEntity<T extends EntityMyrmexBase> extends TargetGoal {
     protected final DragonAITargetItems.Sorter theNearestAttackableTargetSorter;
@@ -33,15 +33,15 @@ public class MyrmexAIFindGaurdingEntity<T extends EntityMyrmexBase> extends Targ
             }
         };
         this.myrmex = myrmex;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
-    public boolean shouldExecute() {
-        if (!this.myrmex.canMove() || this.myrmex.getAttackTarget() != null || this.myrmex.guardingEntity != null) {
+    public boolean canUse() {
+        if (!this.myrmex.canMove() || this.myrmex.getTarget() != null || this.myrmex.guardingEntity != null) {
             return false;
         }
-        List<EntityMyrmexBase> list = this.goalOwner.world.getEntitiesWithinAABB(EntityMyrmexBase.class, this.getTargetableArea(this.getTargetDistance()), this.targetEntitySelector);
+        List<EntityMyrmexBase> list = this.mob.level.getEntitiesOfClass(EntityMyrmexBase.class, this.getTargetableArea(this.getFollowDistance()), this.targetEntitySelector);
         if (list.isEmpty()) {
             return false;
         } else {
@@ -51,12 +51,12 @@ public class MyrmexAIFindGaurdingEntity<T extends EntityMyrmexBase> extends Targ
         }
     }
 
-    protected AxisAlignedBB getTargetableArea(double targetDistance) {
-        return this.goalOwner.getBoundingBox().grow(targetDistance, 4.0D, targetDistance);
+    protected AABB getTargetableArea(double targetDistance) {
+        return this.mob.getBoundingBox().inflate(targetDistance, 4.0D, targetDistance);
     }
 
     @Override
-    public boolean shouldContinueExecuting() {
+    public boolean canContinueToUse() {
         return false;
     }
 
@@ -68,8 +68,8 @@ public class MyrmexAIFindGaurdingEntity<T extends EntityMyrmexBase> extends Targ
         }
 
         public int compare(Entity p_compare_1_, Entity p_compare_2_) {
-            double d0 = this.theEntity.getDistanceSq(p_compare_1_);
-            double d1 = this.theEntity.getDistanceSq(p_compare_2_);
+            double d0 = this.theEntity.distanceToSqr(p_compare_1_);
+            double d1 = this.theEntity.distanceToSqr(p_compare_2_);
             return d0 < d1 ? -1 : (d0 > d1 ? 1 : 0);
         }
     }

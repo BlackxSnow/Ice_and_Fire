@@ -7,8 +7,8 @@ import java.util.Random;
 
 import com.github.alexthe666.iceandfire.config.BiomeConfig;
 
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.biome.Biome;
 
 public enum EnumHippogryphTypes {
     BLACK(false),

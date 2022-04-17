@@ -2,56 +2,56 @@ package com.github.alexthe666.iceandfire.block;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.HorizontalBlock;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItemUseContext;
-import net.minecraft.state.BooleanProperty;
-import net.minecraft.state.StateContainer;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.core.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraftforge.common.ToolType;
 
-import net.minecraft.block.AbstractBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 
-public class BlockDreadStoneFace extends HorizontalBlock implements IDreadBlock, IDragonProof {
+public class BlockDreadStoneFace extends HorizontalDirectionalBlock implements IDreadBlock, IDragonProof {
     public static final BooleanProperty PLAYER_PLACED = BooleanProperty.create("player_placed");
 
     public BlockDreadStoneFace() {
         super(
-    		AbstractBlock.Properties
-    			.create(Material.ROCK)
+    		BlockBehaviour.Properties
+    			.of(Material.STONE)
     			.sound(SoundType.STONE)
-    			.hardnessAndResistance(-1F, 10000F)
+    			.strength(-1F, 10000F)
     			.harvestTool(ToolType.PICKAXE)
     			.harvestLevel(3)
 		);
 
-        this.setDefaultState(this.getStateContainer().getBaseState().with(HORIZONTAL_FACING, Direction.NORTH).with(PLAYER_PLACED, Boolean.valueOf(false)));
+        this.registerDefaultState(this.getStateDefinition().any().setValue(FACING, Direction.NORTH).setValue(PLAYER_PLACED, Boolean.valueOf(false)));
         setRegistryName(IceAndFire.MODID, "dread_stone_face");
     }
 
     @SuppressWarnings("deprecation")
     @Override
-    public float getPlayerRelativeBlockHardness(BlockState state, PlayerEntity player, IBlockReader worldIn, BlockPos pos) {
-        if (state.get(PLAYER_PLACED)) {
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter worldIn, BlockPos pos) {
+        if (state.getValue(PLAYER_PLACED)) {
             float f = 8f;
             //Code from super method
             return player.getDigSpeed(state, pos) / f / (float) 30;
         }
-        return super.getPlayerRelativeBlockHardness(state,player,worldIn,pos);
+        return super.getDestroyProgress(state,player,worldIn,pos);
     }
 
-    public BlockState getStateForPlacement(BlockItemUseContext context) {
-        return this.getDefaultState().with(HORIZONTAL_FACING, context.getPlacementHorizontalFacing().getOpposite()).with(PLAYER_PLACED, true);
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite()).setValue(PLAYER_PLACED, true);
     }
 
-    protected void fillStateContainer(StateContainer.Builder<Block, BlockState> builder) {
-        builder.add(HORIZONTAL_FACING);
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING);
         builder.add(PLAYER_PLACED);
     }
 }

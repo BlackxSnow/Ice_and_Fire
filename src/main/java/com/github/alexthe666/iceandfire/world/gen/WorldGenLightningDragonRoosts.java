@@ -11,74 +11,74 @@ import com.github.alexthe666.iceandfire.event.WorldGenUtils;
 import com.github.alexthe666.iceandfire.world.IafWorldRegistry;
 import com.mojang.serialization.Codec;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.ChestBlock;
-import net.minecraft.block.ContainerBlock;
-import net.minecraft.block.material.Material;
-import net.minecraft.tileentity.ChestTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.ISeedReader;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.gen.ChunkGenerator;
-import net.minecraft.world.gen.Heightmap;
-import net.minecraft.world.gen.feature.Feature;
-import net.minecraft.world.gen.feature.NoFeatureConfig;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
-public class WorldGenLightningDragonRoosts extends Feature<NoFeatureConfig> {
+public class WorldGenLightningDragonRoosts extends Feature<NoneFeatureConfiguration> {
     private static final Direction[] HORIZONTALS = new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
     private static boolean isMale;
 
-    public WorldGenLightningDragonRoosts(Codec<NoFeatureConfig> configFactoryIn) {
+    public WorldGenLightningDragonRoosts(Codec<NoneFeatureConfiguration> configFactoryIn) {
         super(configFactoryIn);
     }
 
     @Override
-    public boolean generate(ISeedReader worldIn, ChunkGenerator p_230362_3_, Random rand, BlockPos position, NoFeatureConfig p_230362_6_) {
+    public boolean place(WorldGenLevel worldIn, ChunkGenerator p_230362_3_, Random rand, BlockPos position, NoneFeatureConfiguration p_230362_6_) {
         if(!IafWorldRegistry.isDimensionListedForDragons(worldIn)){
             return false;
         }
         if(!IafConfig.generateDragonRoosts || rand.nextInt(IafConfig.generateDragonRoostChance) != 0 || !IafWorldRegistry.isFarEnoughFromSpawn(worldIn, position) || !IafWorldRegistry.isFarEnoughFromDangerousGen(worldIn, position)){
             return false;
         }
-        if(!worldIn.getFluidState(worldIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, position).down()).isEmpty()){
+        if(!worldIn.getFluidState(worldIn.getHeightmapPos(Heightmap.Types.WORLD_SURFACE_WG, position).below()).isEmpty()){
             return false;
         }
         isMale = new Random().nextBoolean();
         int boulders = 0;
         int radius = 12 + rand.nextInt(8);
-        position = worldIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, position);
-        worldIn.setBlockState(position, Blocks.AIR.getDefaultState(), 2);
+        position = worldIn.getHeightmapPos(Heightmap.Types.WORLD_SURFACE_WG, position);
+        worldIn.setBlock(position, Blocks.AIR.defaultBlockState(), 2);
         BlockPos finalPosition = position;
-        if(!worldIn.isRemote()){
-        	EntityDragonBase dragon = IafEntityRegistry.LIGHTNING_DRAGON.create(worldIn.getWorld());
+        if(!worldIn.isClientSide()){
+        	EntityDragonBase dragon = IafEntityRegistry.LIGHTNING_DRAGON.create(worldIn.getLevel());
         	dragon.setGender(isMale);
-            dragon.enablePersistence();
+            dragon.setPersistenceRequired();
             dragon.growDragon(40 + radius);
             dragon.setAgingDisabled(true);
             dragon.setHealth(dragon.getMaxHealth());
             dragon.setVariant(new Random().nextInt(4));
-            dragon.setPositionAndRotation(position.getX() + 0.5, 1 + worldIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, position).getY() + 1.5, position.getZ() + 0.5, rand.nextFloat() * 360, 0);
+            dragon.absMoveTo(position.getX() + 0.5, 1 + worldIn.getHeightmapPos(Heightmap.Types.WORLD_SURFACE_WG, position).getY() + 1.5, position.getZ() + 0.5, rand.nextFloat() * 360, 0);
             dragon.homePos = position;
             dragon.hasHomePosition = true;
             dragon.setHunger(50);
-            dragon.setQueuedToSit(true);
-            worldIn.addEntity(dragon);
+            dragon.setInSittingPose(true);
+            worldIn.addFreshEntity(dragon);
         }
         {
             int j = radius;
             int k = 2;
             int l = radius;
             float f = (float) (j + k + l) * 0.333F + 0.5F;
-            BlockPos.getAllInBox(position.add(-j, k, -l), position.add(j, 0, l)).map(BlockPos::toImmutable).forEach(blockPos ->  {
+            BlockPos.betweenClosedStream(position.offset(-j, k, -l), position.offset(j, 0, l)).map(BlockPos::immutable).forEach(blockPos ->  {
                 int yAdd = blockPos.getY() - finalPosition.getY();
-                if (blockPos.distanceSq(finalPosition) <= (double) (f * f) && yAdd < 2 + rand.nextInt(k) && !worldIn.isAirBlock(blockPos.down())) {
-                    if (worldIn.isAirBlock(blockPos.up()))
-                        worldIn.setBlockState(blockPos, IafBlockRegistry.CRACKLED_DIRT.getDefaultState(), 2);
+                if (blockPos.distSqr(finalPosition) <= (double) (f * f) && yAdd < 2 + rand.nextInt(k) && !worldIn.isEmptyBlock(blockPos.below())) {
+                    if (worldIn.isEmptyBlock(blockPos.above()))
+                        worldIn.setBlock(blockPos, IafBlockRegistry.CRACKLED_DIRT.defaultBlockState(), 2);
                     else
-                        worldIn.setBlockState(blockPos, IafBlockRegistry.CRACKLED_GRASS.getDefaultState(), 2);
+                        worldIn.setBlock(blockPos, IafBlockRegistry.CRACKLED_GRASS.defaultBlockState(), 2);
                 }
             });
         }
@@ -87,12 +87,12 @@ public class WorldGenLightningDragonRoosts extends Feature<NoFeatureConfig> {
             int k = (radius / 5);
             int l = radius;
             float f = (float) (j + k + l) * 0.333F + 0.5F;
-            BlockPos.getAllInBox(position.add(-j, -k, -l), position.add(j, 1, l)).map(BlockPos::toImmutable).forEach(blockPos ->  {
-                if (blockPos.distanceSq(finalPosition) < (double) (f * f)) {
-                    worldIn.setBlockState(blockPos, rand.nextBoolean() ? IafBlockRegistry.CRACKLED_GRAVEL.getDefaultState() : IafBlockRegistry.CRACKLED_DIRT.getDefaultState(), 2);
+            BlockPos.betweenClosedStream(position.offset(-j, -k, -l), position.offset(j, 1, l)).map(BlockPos::immutable).forEach(blockPos ->  {
+                if (blockPos.distSqr(finalPosition) < (double) (f * f)) {
+                    worldIn.setBlock(blockPos, rand.nextBoolean() ? IafBlockRegistry.CRACKLED_GRAVEL.defaultBlockState() : IafBlockRegistry.CRACKLED_DIRT.defaultBlockState(), 2);
                 }
-                else if (blockPos.distanceSq(finalPosition) == (double) (f * f)) {
-                    worldIn.setBlockState(blockPos, rand.nextBoolean() ? IafBlockRegistry.CRACKLED_COBBLESTONE.getDefaultState() : IafBlockRegistry.CRACKLED_COBBLESTONE.getDefaultState(), 2);
+                else if (blockPos.distSqr(finalPosition) == (double) (f * f)) {
+                    worldIn.setBlock(blockPos, rand.nextBoolean() ? IafBlockRegistry.CRACKLED_COBBLESTONE.defaultBlockState() : IafBlockRegistry.CRACKLED_COBBLESTONE.defaultBlockState(), 2);
                 }
             });
         }
@@ -102,10 +102,10 @@ public class WorldGenLightningDragonRoosts extends Feature<NoFeatureConfig> {
             int k = 2;
             int l = radius;
             float f = (float) (j + k + l) * 0.333F + 0.5F;
-            BlockPos up = position.up(k - 1);
-            BlockPos.getAllInBox(up.add(-j, -k + 2, -l), up.add(j, k, l)).map(BlockPos::toImmutable).forEach(blockPos ->  {
-                if (blockPos.distanceSq(finalPosition) <= (double) (f * f)) {
-                    worldIn.setBlockState(blockPos, Blocks.AIR.getDefaultState(), 2);
+            BlockPos up = position.above(k - 1);
+            BlockPos.betweenClosedStream(up.offset(-j, -k + 2, -l), up.offset(j, k, l)).map(BlockPos::immutable).forEach(blockPos ->  {
+                if (blockPos.distSqr(finalPosition) <= (double) (f * f)) {
+                    worldIn.setBlock(blockPos, Blocks.AIR.defaultBlockState(), 2);
                 }
             });
         }
@@ -115,40 +115,40 @@ public class WorldGenLightningDragonRoosts extends Feature<NoFeatureConfig> {
             int k = (radius / 5);
             int l = radius;
             float f = (float) (j + k + l) * 0.333F + 0.5F;
-            BlockPos.getAllInBox(position.add(-j, -k, -l), position.add(j, k, l)).map(BlockPos::toImmutable).forEach(blockPos ->  {
-                if (blockPos.distanceSq(finalPosition) <= (double) (f * f)) {
-                    double dist = blockPos.distanceSq(finalPosition) / (double) (f * f);
-                    if (!worldIn.isAirBlock(finalPosition) && rand.nextDouble() > dist * 0.5D) {
+            BlockPos.betweenClosedStream(position.offset(-j, -k, -l), position.offset(j, k, l)).map(BlockPos::immutable).forEach(blockPos ->  {
+                if (blockPos.distSqr(finalPosition) <= (double) (f * f)) {
+                    double dist = blockPos.distSqr(finalPosition) / (double) (f * f);
+                    if (!worldIn.isEmptyBlock(finalPosition) && rand.nextDouble() > dist * 0.5D) {
                         transformState(worldIn, blockPos, worldIn.getBlockState(blockPos));
                     }
                     if (dist > 0.5D && rand.nextInt(1000) == 0) {
-                        BlockPos height = worldIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, blockPos);
+                        BlockPos height = worldIn.getHeightmapPos(Heightmap.Types.WORLD_SURFACE_WG, blockPos);
                         new WorldGenRoostBoulder(IafBlockRegistry.CRACKLED_COBBLESTONE, rand.nextInt(3), true).generate(worldIn, rand, height);
                     }
                     if (dist > 0.05D && rand.nextInt(800) == 0) {
-                        BlockPos height = worldIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, blockPos);
+                        BlockPos height = worldIn.getHeightmapPos(Heightmap.Types.WORLD_SURFACE_WG, blockPos);
                         new WorldGenRoostSpire().generate(worldIn, rand, height);
                     }
                     if (dist > 0.05D && rand.nextInt(1000) == 0) {
-                        BlockPos height = worldIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, blockPos);
+                        BlockPos height = worldIn.getHeightmapPos(Heightmap.Types.WORLD_SURFACE_WG, blockPos);
                         new WorldGenRoostSpike(HORIZONTALS[rand.nextInt(3)]).generate(worldIn, rand, height);
                     }
                     if (dist < 0.3D && rand.nextInt(isMale ? 250 : 400) == 0) {
-                        BlockPos height = WorldGenUtils.degradeSurface(worldIn, worldIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, blockPos)).up();
+                        BlockPos height = WorldGenUtils.degradeSurface(worldIn, worldIn.getHeightmapPos(Heightmap.Types.WORLD_SURFACE_WG, blockPos)).above();
                         new WorldGenRoostGoldPile(IafBlockRegistry.COPPER_PILE).generate(worldIn, rand, height);
                     }
                     if (dist < 0.3D && rand.nextInt(isMale ? 500 : 700) == 0) {
-                        BlockPos height = WorldGenUtils.degradeSurface(worldIn, worldIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, blockPos)).up();
-                        worldIn.setBlockState(height, Blocks.CHEST.getDefaultState().with(ChestBlock.FACING, HORIZONTALS[new Random().nextInt(3)]), 2);
+                        BlockPos height = WorldGenUtils.degradeSurface(worldIn, worldIn.getHeightmapPos(Heightmap.Types.WORLD_SURFACE_WG, blockPos)).above();
+                        worldIn.setBlock(height, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, HORIZONTALS[new Random().nextInt(3)]), 2);
                         if (worldIn.getBlockState(height).getBlock() instanceof ChestBlock) {
-                            TileEntity tileentity1 = worldIn.getTileEntity(height);
-                            if (tileentity1 instanceof ChestTileEntity) {
-                                ((ChestTileEntity) tileentity1).setLootTable(WorldGenLightningDragonCave.LIGHTNINGDRAGON_CHEST, new Random().nextLong());
+                            BlockEntity tileentity1 = worldIn.getBlockEntity(height);
+                            if (tileentity1 instanceof ChestBlockEntity) {
+                                ((ChestBlockEntity) tileentity1).setLootTable(WorldGenLightningDragonCave.LIGHTNINGDRAGON_CHEST, new Random().nextLong());
                             }
                         }
                     }
                     if (rand.nextInt(6000) == 0) {
-                        BlockPos height = worldIn.getHeight(Heightmap.Type.WORLD_SURFACE_WG, blockPos);
+                        BlockPos height = worldIn.getHeightmapPos(Heightmap.Types.WORLD_SURFACE_WG, blockPos);
                         new WorldGenRoostArch(IafBlockRegistry.CRACKLED_COBBLESTONE).generate(worldIn, rand, height);
                     }
                 }
@@ -157,28 +157,28 @@ public class WorldGenLightningDragonRoosts extends Feature<NoFeatureConfig> {
         return false;
     }
 
-    private void transformState(IWorld world, BlockPos blockpos, BlockState state) {
-        float hardness = state.getBlockHardness(world, blockpos);
+    private void transformState(LevelAccessor world, BlockPos blockpos, BlockState state) {
+        float hardness = state.getDestroySpeed(world, blockpos);
         if (hardness != -1.0F) {
-            if (state.getBlock() instanceof ContainerBlock) {
+            if (state.getBlock() instanceof BaseEntityBlock) {
                 return;
             }
-            if (state.getMaterial() == Material.ORGANIC) {
-                world.setBlockState(blockpos, IafBlockRegistry.CRACKLED_GRASS.getDefaultState(), 2);
-            } else if (state.getMaterial() == Material.EARTH && state.getBlock() == Blocks.DIRT) {
-                world.setBlockState(blockpos, IafBlockRegistry.CRACKLED_DIRT.getDefaultState(), 2);
-            } else if (state.getMaterial() == Material.EARTH && state.getBlock() == Blocks.GRAVEL) {
-                world.setBlockState(blockpos, IafBlockRegistry.CRACKLED_GRAVEL.getDefaultState(), 2);
-            } else if (state.getMaterial() == Material.ROCK && (state.getBlock() == Blocks.COBBLESTONE || state.getBlock().getTranslationKey().contains("cobblestone"))) {
-                world.setBlockState(blockpos, IafBlockRegistry.CRACKLED_COBBLESTONE.getDefaultState(), 2);
-            } else if (state.getMaterial() == Material.ROCK && state.getBlock() != IafBlockRegistry.CRACKLED_COBBLESTONE) {
-                world.setBlockState(blockpos, IafBlockRegistry.CRACKLED_STONE.getDefaultState(), 2);
+            if (state.getMaterial() == Material.GRASS) {
+                world.setBlock(blockpos, IafBlockRegistry.CRACKLED_GRASS.defaultBlockState(), 2);
+            } else if (state.getMaterial() == Material.DIRT && state.getBlock() == Blocks.DIRT) {
+                world.setBlock(blockpos, IafBlockRegistry.CRACKLED_DIRT.defaultBlockState(), 2);
+            } else if (state.getMaterial() == Material.DIRT && state.getBlock() == Blocks.GRAVEL) {
+                world.setBlock(blockpos, IafBlockRegistry.CRACKLED_GRAVEL.defaultBlockState(), 2);
+            } else if (state.getMaterial() == Material.STONE && (state.getBlock() == Blocks.COBBLESTONE || state.getBlock().getDescriptionId().contains("cobblestone"))) {
+                world.setBlock(blockpos, IafBlockRegistry.CRACKLED_COBBLESTONE.defaultBlockState(), 2);
+            } else if (state.getMaterial() == Material.STONE && state.getBlock() != IafBlockRegistry.CRACKLED_COBBLESTONE) {
+                world.setBlock(blockpos, IafBlockRegistry.CRACKLED_STONE.defaultBlockState(), 2);
             } else if (state.getBlock() == Blocks.GRASS_PATH) {
-                world.setBlockState(blockpos, IafBlockRegistry.CRACKLED_GRASS_PATH.getDefaultState(), 2);
+                world.setBlock(blockpos, IafBlockRegistry.CRACKLED_GRASS_PATH.defaultBlockState(), 2);
             } else if (state.getMaterial() == Material.WOOD) {
-                world.setBlockState(blockpos, IafBlockRegistry.ASH.getDefaultState(), 2);
-            } else if (state.getMaterial() == Material.LEAVES || state.getMaterial() == Material.PLANTS) {
-                world.setBlockState(blockpos, Blocks.AIR.getDefaultState(), 2);
+                world.setBlock(blockpos, IafBlockRegistry.ASH.defaultBlockState(), 2);
+            } else if (state.getMaterial() == Material.LEAVES || state.getMaterial() == Material.PLANT) {
+                world.setBlock(blockpos, Blocks.AIR.defaultBlockState(), 2);
             }
         }
     }

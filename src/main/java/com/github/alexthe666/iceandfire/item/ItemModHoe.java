@@ -13,47 +13,47 @@ import com.github.alexthe666.iceandfire.entity.EntityDeathWorm;
 import com.github.alexthe666.iceandfire.entity.props.FrozenProperties;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.CreatureAttribute;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.attributes.Attribute;
-import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.effect.LightningBoltEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.HoeItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.entity.MobType;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.HoeItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.Level;
 
 public class ItemModHoe extends HoeItem {
 
     private final CustomToolMaterial toolMaterial;
 
     public ItemModHoe(CustomToolMaterial toolmaterial, String gameName) {
-        super(toolmaterial, -toolmaterial.getHarvestLevel(), -3.0F, new Item.Properties().group(IceAndFire.TAB_ITEMS));
+        super(toolmaterial, -toolmaterial.getLevel(), -3.0F, new Item.Properties().tab(IceAndFire.TAB_ITEMS));
         this.toolMaterial = toolmaterial;
         this.setRegistryName(IceAndFire.MODID, gameName);
     }
 
-    public Multimap<Attribute, AttributeModifier> getAttributeModifiers(EquipmentSlotType equipmentSlot) {
-        return equipmentSlot == EquipmentSlotType.MAINHAND && this.toolMaterial instanceof DragonsteelToolMaterial ? this.bakeDragonsteel() : super.getAttributeModifiers(equipmentSlot);
+    public Multimap<Attribute, AttributeModifier> getDefaultAttributeModifiers(EquipmentSlot equipmentSlot) {
+        return equipmentSlot == EquipmentSlot.MAINHAND && this.toolMaterial instanceof DragonsteelToolMaterial ? this.bakeDragonsteel() : super.getDefaultAttributeModifiers(equipmentSlot);
     }
 
     private Multimap<Attribute, AttributeModifier> dragonsteelModifiers;
     private Multimap<Attribute, AttributeModifier> bakeDragonsteel() {
-        if(toolMaterial.getAttackDamage() != IafConfig.dragonsteelBaseDamage || dragonsteelModifiers == null){
+        if(toolMaterial.getAttackDamageBonus() != IafConfig.dragonsteelBaseDamage || dragonsteelModifiers == null){
             ImmutableMultimap.Builder<Attribute, AttributeModifier> lvt_5_1_ = ImmutableMultimap.builder();
-            lvt_5_1_.put(Attributes.ATTACK_DAMAGE, new AttributeModifier(ATTACK_DAMAGE_MODIFIER, "Weapon modifier", (double)1F, AttributeModifier.Operation.ADDITION));
-            lvt_5_1_.put(Attributes.ATTACK_SPEED, new AttributeModifier(ATTACK_SPEED_MODIFIER, "Weapon modifier", (double)-3F, AttributeModifier.Operation.ADDITION));
+            lvt_5_1_.put(Attributes.ATTACK_DAMAGE, new AttributeModifier(BASE_ATTACK_DAMAGE_UUID, "Weapon modifier", (double)1F, AttributeModifier.Operation.ADDITION));
+            lvt_5_1_.put(Attributes.ATTACK_SPEED, new AttributeModifier(BASE_ATTACK_SPEED_UUID, "Weapon modifier", (double)-3F, AttributeModifier.Operation.ADDITION));
             this.dragonsteelModifiers = lvt_5_1_.build();
             return this.dragonsteelModifiers;
         }else{
@@ -68,65 +68,65 @@ public class ItemModHoe extends HoeItem {
 
 
     @Override
-    public boolean hitEntity(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+    public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         if (toolMaterial == IafItemRegistry.SILVER_TOOL_MATERIAL) {
-            if (target.getCreatureAttribute() == CreatureAttribute.UNDEAD) {
-                target.attackEntityFrom(DamageSource.MAGIC, 3.0F);
+            if (target.getMobType() == MobType.UNDEAD) {
+                target.hurt(DamageSource.MAGIC, 3.0F);
             }
         }
         if (this.toolMaterial == IafItemRegistry.MYRMEX_CHITIN_TOOL_MATERIAL) {
-            if (target.getCreatureAttribute() != CreatureAttribute.ARTHROPOD) {
-                target.attackEntityFrom(DamageSource.GENERIC, 6.0F);
+            if (target.getMobType() != MobType.ARTHROPOD) {
+                target.hurt(DamageSource.GENERIC, 6.0F);
             }
             if (target instanceof EntityDeathWorm) {
-                target.attackEntityFrom(DamageSource.GENERIC, 6.0F);
+                target.hurt(DamageSource.GENERIC, 6.0F);
             }
         }
         if (toolMaterial == IafItemRegistry.DRAGONSTEEL_FIRE_TOOL_MATERIAL && IafConfig.dragonWeaponFireAbility) {
-            target.setFire(15);
-            target.applyKnockback( 1F, attacker.getPosX() - target.getPosX(), attacker.getPosZ() - target.getPosZ());
+            target.setSecondsOnFire(15);
+            target.knockback( 1F, attacker.getX() - target.getX(), attacker.getZ() - target.getZ());
         }
         if (toolMaterial == IafItemRegistry.DRAGONSTEEL_ICE_TOOL_MATERIAL && IafConfig.dragonWeaponIceAbility) {
             FrozenProperties.setFrozenFor(target, 300);
-            target.addPotionEffect(new EffectInstance(Effects.SLOWNESS, 300, 2));
-            target.applyKnockback( 1F, attacker.getPosX() - target.getPosX(), attacker.getPosZ() - target.getPosZ());
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 300, 2));
+            target.knockback( 1F, attacker.getX() - target.getX(), attacker.getZ() - target.getZ());
         }
         if (toolMaterial == IafItemRegistry.DRAGONSTEEL_LIGHTNING_TOOL_MATERIAL && IafConfig.dragonWeaponLightningAbility) {
             boolean flag = true;
-            if(attacker instanceof PlayerEntity){
-                if(((PlayerEntity)attacker).swingProgress > 0.2){
+            if(attacker instanceof Player){
+                if(((Player)attacker).attackAnim > 0.2){
                     flag = false;
                 }
             }
-            if(!attacker.world.isRemote && flag){
-                LightningBoltEntity lightningboltentity = EntityType.LIGHTNING_BOLT.create(target.world);
-                lightningboltentity.moveForced(target.getPositionVec());
-                if(!target.world.isRemote){
-                    target.world.addEntity(lightningboltentity);
+            if(!attacker.level.isClientSide && flag){
+                LightningBolt lightningboltentity = EntityType.LIGHTNING_BOLT.create(target.level);
+                lightningboltentity.moveTo(target.position());
+                if(!target.level.isClientSide){
+                    target.level.addFreshEntity(lightningboltentity);
                 }
             }
-            target.applyKnockback( 1F, attacker.getPosX() - target.getPosX(), attacker.getPosZ() - target.getPosZ());
+            target.knockback( 1F, attacker.getX() - target.getX(), attacker.getZ() - target.getZ());
         }
-        return super.hitEntity(stack, target, attacker);
+        return super.hurtEnemy(stack, target, attacker);
     }
 
     @Override
-    public void addInformation(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
-        super.addInformation(stack, worldIn, tooltip, flagIn);
+    public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> tooltip, TooltipFlag flagIn) {
+        super.appendHoverText(stack, worldIn, tooltip, flagIn);
         if (this == IafItemRegistry.SILVER_HOE) {
-            tooltip.add(new TranslationTextComponent("silvertools.hurt").mergeStyle(TextFormatting.GREEN));
+            tooltip.add(new TranslatableComponent("silvertools.hurt").withStyle(ChatFormatting.GREEN));
         }
         if (this == IafItemRegistry.MYRMEX_DESERT_HOE || this == IafItemRegistry.MYRMEX_JUNGLE_HOE) {
-            tooltip.add(new TranslationTextComponent("myrmextools.hurt").mergeStyle(TextFormatting.GREEN));
+            tooltip.add(new TranslatableComponent("myrmextools.hurt").withStyle(ChatFormatting.GREEN));
         }
         if (toolMaterial == IafItemRegistry.DRAGONSTEEL_FIRE_TOOL_MATERIAL) {
-            tooltip.add(new TranslationTextComponent("dragon_sword_fire.hurt2").mergeStyle(TextFormatting.DARK_RED));
+            tooltip.add(new TranslatableComponent("dragon_sword_fire.hurt2").withStyle(ChatFormatting.DARK_RED));
         }
         if (toolMaterial == IafItemRegistry.DRAGONSTEEL_ICE_TOOL_MATERIAL) {
-            tooltip.add(new TranslationTextComponent("dragon_sword_ice.hurt2").mergeStyle(TextFormatting.AQUA));
+            tooltip.add(new TranslatableComponent("dragon_sword_ice.hurt2").withStyle(ChatFormatting.AQUA));
         }
         if (toolMaterial == IafItemRegistry.DRAGONSTEEL_LIGHTNING_TOOL_MATERIAL) {
-            tooltip.add(new TranslationTextComponent("dragon_sword_lightning.hurt2").mergeStyle(TextFormatting.DARK_PURPLE));
+            tooltip.add(new TranslatableComponent("dragon_sword_lightning.hurt2").withStyle(ChatFormatting.DARK_PURPLE));
         }
     }
 }

@@ -2,21 +2,21 @@ package com.github.alexthe666.iceandfire.entity.ai;
 
 import com.github.alexthe666.iceandfire.entity.EntityDragonBase;
 
-import net.minecraft.entity.CreatureEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.LookAtGoal;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 
-public class DragonAIWatchClosest extends LookAtGoal {
+public class DragonAIWatchClosest extends LookAtPlayerGoal {
 
-    public DragonAIWatchClosest(CreatureEntity LivingEntityIn, Class<? extends LivingEntity> watchTargetClass, float maxDistance) {
+    public DragonAIWatchClosest(PathfinderMob LivingEntityIn, Class<? extends LivingEntity> watchTargetClass, float maxDistance) {
         super(LivingEntityIn, watchTargetClass, maxDistance);
     }
 
     @Override
-    public boolean shouldExecute() {
-        if (this.entity instanceof EntityDragonBase && (!((EntityDragonBase) this.entity).canMove() || ((EntityDragonBase) this.entity).getAnimation() == EntityDragonBase.ANIMATION_SHAKEPREY)) {
+    public boolean canUse() {
+        if (this.mob instanceof EntityDragonBase && (!((EntityDragonBase) this.mob).canMove() || ((EntityDragonBase) this.mob).getAnimation() == EntityDragonBase.ANIMATION_SHAKEPREY)) {
             return false;
         }
-        return super.shouldExecute();
+        return super.canUse();
     }
 }

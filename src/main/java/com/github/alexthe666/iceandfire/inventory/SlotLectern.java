@@ -1,37 +1,37 @@
 package com.github.alexthe666.iceandfire.inventory;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.container.Slot;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.Container;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 public class SlotLectern extends Slot {
-    private PlayerEntity thePlayer;
+    private Player thePlayer;
     private int removeCount;
 
-    public SlotLectern(PlayerEntity player, IInventory inv, int slotIndex, int xPosition, int yPosition) {
+    public SlotLectern(Player player, Container inv, int slotIndex, int xPosition, int yPosition) {
         super(inv, slotIndex, xPosition, yPosition);
         this.thePlayer = player;
     }
 
     @Override
-    public void onSlotChanged() {
-        this.inventory.markDirty();
+    public void setChanged() {
+        this.container.setChanged();
     }
 
 
     @Override
-    public ItemStack decrStackSize(int amount) {
-        if (this.getHasStack()) {
-            this.removeCount += Math.min(amount, this.getStack().getCount());
+    public ItemStack remove(int amount) {
+        if (this.hasItem()) {
+            this.removeCount += Math.min(amount, this.getItem().getCount());
         }
 
-        return super.decrStackSize(amount);
+        return super.remove(amount);
     }
 
     @Override
-    public ItemStack onTake(PlayerEntity playerIn, ItemStack stack) {
-        this.onCrafting(stack);
+    public ItemStack onTake(Player playerIn, ItemStack stack) {
+        this.checkTakeAchievements(stack);
         return super.onTake(playerIn, stack);
     }
 
@@ -41,9 +41,9 @@ public class SlotLectern extends Slot {
      * onCrafting(item).
      */
     @Override
-    protected void onCrafting(ItemStack stack, int amount) {
+    protected void onQuickCraft(ItemStack stack, int amount) {
         this.removeCount += amount;
-        this.onCrafting(stack);
+        this.checkTakeAchievements(stack);
     }
 
     /**
@@ -51,7 +51,7 @@ public class SlotLectern extends Slot {
      * not ore and wood.
      */
     @Override
-    protected void onCrafting(ItemStack stack) {
+    protected void checkTakeAchievements(ItemStack stack) {
         // thePlayer.addStat(StatList.objectCraftStats[Item.getIdFromItem(stack.getItem())],
         // stack.stackSize);
         this.removeCount = 0;

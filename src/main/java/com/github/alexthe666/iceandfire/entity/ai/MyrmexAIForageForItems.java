@@ -7,14 +7,14 @@ import javax.annotation.Nullable;
 import com.github.alexthe666.iceandfire.entity.EntityMyrmexWorker;
 import com.google.common.base.Predicate;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.TargetGoal;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.world.entity.ai.goal.target.TargetGoal;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.AABB;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class MyrmexAIForageForItems<T extends ItemEntity> extends TargetGoal {
     protected final DragonAITargetItems.Sorter theNearestAttackableTargetSorter;
@@ -31,15 +31,15 @@ public class MyrmexAIForageForItems<T extends ItemEntity> extends TargetGoal {
             }
         };
         this.myrmex = myrmex;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
-    public boolean shouldExecute() {
-        if (!this.myrmex.canMove() || this.myrmex.holdingSomething() || !this.myrmex.getNavigator().noPath() || this.myrmex.shouldEnterHive() || !this.myrmex.keepSearching || this.myrmex.getAttackTarget() != null) {
+    public boolean canUse() {
+        if (!this.myrmex.canMove() || this.myrmex.holdingSomething() || !this.myrmex.getNavigation().isDone() || this.myrmex.shouldEnterHive() || !this.myrmex.keepSearching || this.myrmex.getTarget() != null) {
             return false;
         }
-        List<ItemEntity> list = this.goalOwner.world.getEntitiesWithinAABB(ItemEntity.class, this.getTargetableArea(32), this.targetEntitySelector);
+        List<ItemEntity> list = this.mob.level.getEntitiesOfClass(ItemEntity.class, this.getTargetableArea(32), this.targetEntitySelector);
         if (list.isEmpty()) {
             return false;
         } else {
@@ -49,39 +49,39 @@ public class MyrmexAIForageForItems<T extends ItemEntity> extends TargetGoal {
         }
     }
 
-    protected AxisAlignedBB getTargetableArea(double targetDistance) {
-        return this.goalOwner.getBoundingBox().grow(targetDistance, 5, targetDistance);
+    protected AABB getTargetableArea(double targetDistance) {
+        return this.mob.getBoundingBox().inflate(targetDistance, 5, targetDistance);
     }
 
     @Override
-    public void startExecuting() {
-        this.goalOwner.getNavigator().tryMoveToXYZ(this.targetEntity.getPosX(), this.targetEntity.getPosY(), this.targetEntity.getPosZ(), 1);
-        super.startExecuting();
+    public void start() {
+        this.mob.getNavigation().moveTo(this.targetEntity.getX(), this.targetEntity.getY(), this.targetEntity.getZ(), 1);
+        super.start();
     }
 
     @Override
     public void tick() {
         super.tick();
         if (this.targetEntity == null || this.targetEntity != null && (!this.targetEntity.isAlive() || this.targetEntity.isInWater())) {
-            this.resetTask();
+            this.stop();
         }
-        if (this.targetEntity != null && this.targetEntity.isAlive() && this.goalOwner.getDistanceSq(this.targetEntity) < 8F) {
+        if (this.targetEntity != null && this.targetEntity.isAlive() && this.mob.distanceToSqr(this.targetEntity) < 8F) {
             this.myrmex.onPickupItem(targetEntity);
-            this.myrmex.setHeldItem(Hand.MAIN_HAND, this.targetEntity.getItem());
+            this.myrmex.setItemInHand(InteractionHand.MAIN_HAND, this.targetEntity.getItem());
             this.targetEntity.remove();
-            resetTask();
+            stop();
         }
     }
 
     @Override
-    public void resetTask() {
-        this.myrmex.getNavigator().clearPath();
-        super.resetTask();
+    public void stop() {
+        this.myrmex.getNavigation().stop();
+        super.stop();
     }
 
     @Override
-    public boolean shouldContinueExecuting() {
-        return !this.goalOwner.getNavigator().noPath() && this.myrmex.getAttackTarget() == null;
+    public boolean canContinueToUse() {
+        return !this.mob.getNavigation().isDone() && this.myrmex.getTarget() == null;
     }
 
     public static class Sorter implements Comparator<Entity> {
@@ -92,8 +92,8 @@ public class MyrmexAIForageForItems<T extends ItemEntity> extends TargetGoal {
         }
 
         public int compare(Entity p_compare_1_, Entity p_compare_2_) {
-            double d0 = this.theEntity.getDistanceSq(p_compare_1_);
-            double d1 = this.theEntity.getDistanceSq(p_compare_2_);
+            double d0 = this.theEntity.distanceToSqr(p_compare_1_);
+            double d1 = this.theEntity.distanceToSqr(p_compare_2_);
             return d0 < d1 ? -1 : (d0 > d1 ? 1 : 0);
         }
     }

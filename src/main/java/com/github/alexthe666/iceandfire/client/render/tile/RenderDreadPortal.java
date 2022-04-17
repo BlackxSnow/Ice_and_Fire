@@ -7,18 +7,18 @@ import java.util.stream.IntStream;
 import com.github.alexthe666.iceandfire.client.render.IafRenderType;
 import com.github.alexthe666.iceandfire.entity.tile.TileEntityDreadPortal;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
-import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.tileentity.TileEntityRenderer;
-import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.vector.Matrix4f;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import com.mojang.math.Matrix4f;
 
-public class RenderDreadPortal<T extends TileEntityDreadPortal> extends TileEntityRenderer<T> {
+public class RenderDreadPortal<T extends TileEntityDreadPortal> extends BlockEntityRenderer<T> {
     public static final ResourceLocation END_SKY_TEXTURE = new ResourceLocation("iceandfire:textures/environment/dread_portal_background.png");
     public static final ResourceLocation END_PORTAL_TEXTURE = new ResourceLocation("iceandfire:textures/environment/dread_portal.png");
     private static final Random RANDOM = new Random(31100L);
@@ -26,16 +26,16 @@ public class RenderDreadPortal<T extends TileEntityDreadPortal> extends TileEnti
         return IafRenderType.getDreadlandsRenderType(p_228882_0_ + 1);
     }).collect(ImmutableList.toImmutableList());
 
-    public RenderDreadPortal(TileEntityRendererDispatcher rendererDispatcherIn) {
+    public RenderDreadPortal(BlockEntityRenderDispatcher rendererDispatcherIn) {
         super(rendererDispatcherIn);
     }
 
-    public void render(T tileEntityIn, float partialTicks, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int combinedLightIn, int combinedOverlayIn) {
+    public void render(T tileEntityIn, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightIn, int combinedOverlayIn) {
         RANDOM.setSeed(31100L);
-        double d0 = tileEntityIn.getPos().distanceSq(this.renderDispatcher.renderInfo.getProjectedView(), true);
+        double d0 = tileEntityIn.getBlockPos().distSqr(this.renderer.camera.getPosition(), true);
         int i = this.getPasses(d0);
         float f = this.getOffset();
-        Matrix4f matrix4f = matrixStackIn.getLast().getMatrix();
+        Matrix4f matrix4f = matrixStackIn.last().pose();
         this.renderCube(tileEntityIn, f, 0.15F, matrix4f, bufferIn.getBuffer(RENDER_TYPES.get(0)));
 
         for (int j = 1; j < i; ++j) {
@@ -44,7 +44,7 @@ public class RenderDreadPortal<T extends TileEntityDreadPortal> extends TileEnti
 
     }
 
-    private void renderCube(T tileEntityIn, float p_228883_2_, float p_228883_3_, Matrix4f p_228883_4_, IVertexBuilder p_228883_5_) {
+    private void renderCube(T tileEntityIn, float p_228883_2_, float p_228883_3_, Matrix4f p_228883_4_, VertexConsumer p_228883_5_) {
         float f = 1.0F;
         float f1 = 1.0F;
         float f2 = 1.0F;
@@ -56,12 +56,12 @@ public class RenderDreadPortal<T extends TileEntityDreadPortal> extends TileEnti
         this.renderFace(tileEntityIn, p_228883_4_, p_228883_5_, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 0.0F, 0.0F, f, f1, f2, Direction.UP);
     }
 
-    private void renderFace(T tileEntityIn, Matrix4f p_228884_2_, IVertexBuilder p_228884_3_, float p_228884_4_, float p_228884_5_, float p_228884_6_, float p_228884_7_, float p_228884_8_, float p_228884_9_, float p_228884_10_, float p_228884_11_, float p_228884_12_, float p_228884_13_, float p_228884_14_, Direction p_228884_15_) {
+    private void renderFace(T tileEntityIn, Matrix4f p_228884_2_, VertexConsumer p_228884_3_, float p_228884_4_, float p_228884_5_, float p_228884_6_, float p_228884_7_, float p_228884_8_, float p_228884_9_, float p_228884_10_, float p_228884_11_, float p_228884_12_, float p_228884_13_, float p_228884_14_, Direction p_228884_15_) {
         if (tileEntityIn.shouldRenderFace(p_228884_15_)) {
-            p_228884_3_.pos(p_228884_2_, p_228884_4_, p_228884_6_, p_228884_8_).color(p_228884_12_, p_228884_13_, p_228884_14_, 1.0F).endVertex();
-            p_228884_3_.pos(p_228884_2_, p_228884_5_, p_228884_6_, p_228884_9_).color(p_228884_12_, p_228884_13_, p_228884_14_, 1.0F).endVertex();
-            p_228884_3_.pos(p_228884_2_, p_228884_5_, p_228884_7_, p_228884_10_).color(p_228884_12_, p_228884_13_, p_228884_14_, 1.0F).endVertex();
-            p_228884_3_.pos(p_228884_2_, p_228884_4_, p_228884_7_, p_228884_11_).color(p_228884_12_, p_228884_13_, p_228884_14_, 1.0F).endVertex();
+            p_228884_3_.vertex(p_228884_2_, p_228884_4_, p_228884_6_, p_228884_8_).color(p_228884_12_, p_228884_13_, p_228884_14_, 1.0F).endVertex();
+            p_228884_3_.vertex(p_228884_2_, p_228884_5_, p_228884_6_, p_228884_9_).color(p_228884_12_, p_228884_13_, p_228884_14_, 1.0F).endVertex();
+            p_228884_3_.vertex(p_228884_2_, p_228884_5_, p_228884_7_, p_228884_10_).color(p_228884_12_, p_228884_13_, p_228884_14_, 1.0F).endVertex();
+            p_228884_3_.vertex(p_228884_2_, p_228884_4_, p_228884_7_, p_228884_11_).color(p_228884_12_, p_228884_13_, p_228884_14_, 1.0F).endVertex();
         }
 
     }

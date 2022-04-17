@@ -13,23 +13,23 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.loot.LootContext;
-import net.minecraft.loot.LootFunction;
-import net.minecraft.loot.LootFunctionType;
-import net.minecraft.loot.LootParameters;
-import net.minecraft.loot.conditions.ILootCondition;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.functions.LootItemConditionalFunction;
+import net.minecraft.world.level.storage.loot.functions.LootItemFunctionType;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
-public class CustomizeToDragon extends LootFunction {
+public class CustomizeToDragon extends LootItemConditionalFunction {
 
-    public CustomizeToDragon(ILootCondition[] conditionsIn) {
+    public CustomizeToDragon(LootItemCondition[] conditionsIn) {
         super(conditionsIn);
     }
 
-    protected ItemStack doApply(ItemStack stack, LootContext context) {
-        if (!stack.isEmpty() && context.get(LootParameters.THIS_ENTITY) instanceof EntityDragonBase) {
+    protected ItemStack run(ItemStack stack, LootContext context) {
+        if (!stack.isEmpty() && context.getParamOrNull(LootContextParams.THIS_ENTITY) instanceof EntityDragonBase) {
             Random random = new Random();
-            EntityDragonBase dragon = (EntityDragonBase) context.get(LootParameters.THIS_ENTITY);
+            EntityDragonBase dragon = (EntityDragonBase) context.getParamOrNull(LootContextParams.THIS_ENTITY);
             if (dragon == null){
                 return stack;
             }
@@ -42,7 +42,7 @@ public class CustomizeToDragon extends LootFunction {
                 return new ItemStack(dragon.getVariantScale(dragon.getVariant()), stack.getCount());
             }
             if (stack.getItem() instanceof ItemDragonEgg) {
-                if (dragon.isAdult()) {
+                if (dragon.shouldDropLoot()) {
                     return new ItemStack(dragon.getVariantEgg(dragon.getVariant()), stack.getCount());
                 } else {
                     stack.setCount(1 + random.nextInt(1 + (dragon.getAgeInDays() / 5)));
@@ -69,12 +69,12 @@ public class CustomizeToDragon extends LootFunction {
     }
 
     @Override
-    public LootFunctionType getFunctionType() {
+    public LootItemFunctionType getType() {
         return IafLootRegistry.CUSTOMIZE_TO_DRAGON;
     }
 
 
-    public static class Serializer extends LootFunction.Serializer<CustomizeToDragon> {
+    public static class Serializer extends LootItemConditionalFunction.Serializer<CustomizeToDragon> {
         public Serializer() {
             super();
         }
@@ -83,7 +83,7 @@ public class CustomizeToDragon extends LootFunction {
         }
 
         @Override
-        public CustomizeToDragon deserialize(JsonObject object, JsonDeserializationContext deserializationContext, ILootCondition[] conditionsIn) {
+        public CustomizeToDragon deserialize(JsonObject object, JsonDeserializationContext deserializationContext, LootItemCondition[] conditionsIn) {
             return new CustomizeToDragon(conditionsIn);
         }
     }

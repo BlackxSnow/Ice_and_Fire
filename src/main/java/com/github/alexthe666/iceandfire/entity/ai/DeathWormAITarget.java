@@ -5,14 +5,14 @@ import java.util.EnumSet;
 import com.github.alexthe666.iceandfire.entity.EntityDeathWorm;
 import com.google.common.base.Predicate;
 
-import net.minecraft.entity.CreatureEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
-import net.minecraft.entity.monster.MonsterEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class DeathWormAITarget<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
     private EntityDeathWorm deathworm;
@@ -20,20 +20,20 @@ public class DeathWormAITarget<T extends LivingEntity> extends NearestAttackable
     public DeathWormAITarget(EntityDeathWorm entityIn, Class<T> classTarget, boolean checkSight, Predicate<LivingEntity> targetPredicate) {
         super(entityIn, classTarget, 20, checkSight, false, targetPredicate);
         this.deathworm = entityIn;
-        this.setMutexFlags(EnumSet.of(Flag.TARGET));
+        this.setFlags(EnumSet.of(Flag.TARGET));
     }
 
     @Override
-    public boolean shouldExecute() {
-        if (super.shouldExecute() && nearestTarget != null && !nearestTarget.getClass().equals(this.deathworm.getClass())) {
-            if (nearestTarget instanceof PlayerEntity && !deathworm.isOwner(nearestTarget)) {
-                return !deathworm.isTamed();
+    public boolean canUse() {
+        if (super.canUse() && target != null && !target.getClass().equals(this.deathworm.getClass())) {
+            if (target instanceof Player && !deathworm.isOwnedBy(target)) {
+                return !deathworm.isTame();
             } else {
-                if (!deathworm.isOwner(nearestTarget)) {
+                if (!deathworm.isOwnedBy(target)) {
                     return true;
                 }
-                if (nearestTarget instanceof MonsterEntity && deathworm.getWormAge() > 2) {
-                    if (nearestTarget instanceof CreatureEntity) {
+                if (target instanceof Monster && deathworm.getWormAge() > 2) {
+                    if (target instanceof PathfinderMob) {
                         return deathworm.getWormAge() > 3;
                     }
                     return true;
@@ -43,7 +43,7 @@ public class DeathWormAITarget<T extends LivingEntity> extends NearestAttackable
         return false;
     }
 
-    protected AxisAlignedBB getTargetableArea(double targetDistance) {
-        return this.deathworm.getBoundingBox().grow(targetDistance, targetDistance, targetDistance);
+    protected AABB getTargetSearchArea(double targetDistance) {
+        return this.deathworm.getBoundingBox().inflate(targetDistance, targetDistance, targetDistance);
     }
 }

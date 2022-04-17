@@ -6,33 +6,33 @@ import javax.annotation.Nullable;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.Level;
 
 public class ItemHydraHeart extends Item {
 
     public ItemHydraHeart() {
-        super(new Item.Properties().group(IceAndFire.TAB_ITEMS).maxStackSize(1));
+        super(new Item.Properties().tab(IceAndFire.TAB_ITEMS).stacksTo(1));
         this.setRegistryName(IceAndFire.MODID, "hydra_heart");
     }
 
     public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
-        return !oldStack.isItemEqual(newStack);
+        return !oldStack.sameItem(newStack);
     }
 
     @Override
-    public void inventoryTick(ItemStack stack, World world, Entity entity, int itemSlot, boolean isSelected) {
-        if (entity instanceof PlayerEntity && itemSlot >= 0 && itemSlot <= 8) {
-            double healthPercentage = ((PlayerEntity) entity).getHealth() / Math.max(1, ((PlayerEntity) entity).getMaxHealth());
+    public void inventoryTick(ItemStack stack, Level world, Entity entity, int itemSlot, boolean isSelected) {
+        if (entity instanceof Player && itemSlot >= 0 && itemSlot <= 8) {
+            double healthPercentage = ((Player) entity).getHealth() / Math.max(1, ((Player) entity).getMaxHealth());
             if (healthPercentage < 1.0D) {
                 int level = 0;
                 if (healthPercentage < 0.25D) {
@@ -43,16 +43,16 @@ public class ItemHydraHeart extends Item {
                     level = 1;
                 }
                 //Consider using EffectInstance.combine
-                if (!((PlayerEntity) entity).isPotionActive(Effects.REGENERATION) || ((PlayerEntity) entity).getActivePotionEffect(Effects.REGENERATION).getAmplifier() < level)
-                    ((PlayerEntity) entity).addPotionEffect(new EffectInstance(Effects.REGENERATION, 900, level, true, false));
+                if (!((Player) entity).hasEffect(MobEffects.REGENERATION) || ((Player) entity).getEffect(MobEffects.REGENERATION).getAmplifier() < level)
+                    ((Player) entity).addEffect(new MobEffectInstance(MobEffects.REGENERATION, 900, level, true, false));
             }
             //In hotbar
         }
     }
 
-    public void addInformation(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
-        tooltip.add(new TranslationTextComponent("item.iceandfire.legendary_weapon.desc").mergeStyle(TextFormatting.GRAY));
-        tooltip.add(new TranslationTextComponent("item.iceandfire.hydra_heart.desc_0").mergeStyle(TextFormatting.GRAY));
-        tooltip.add(new TranslationTextComponent("item.iceandfire.hydra_heart.desc_1").mergeStyle(TextFormatting.GRAY));
+    public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> tooltip, TooltipFlag flagIn) {
+        tooltip.add(new TranslatableComponent("item.iceandfire.legendary_weapon.desc").withStyle(ChatFormatting.GRAY));
+        tooltip.add(new TranslatableComponent("item.iceandfire.hydra_heart.desc_0").withStyle(ChatFormatting.GRAY));
+        tooltip.add(new TranslatableComponent("item.iceandfire.hydra_heart.desc_1").withStyle(ChatFormatting.GRAY));
     }
 }

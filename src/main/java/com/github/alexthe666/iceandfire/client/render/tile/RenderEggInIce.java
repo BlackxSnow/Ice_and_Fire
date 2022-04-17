@@ -2,29 +2,29 @@ package com.github.alexthe666.iceandfire.client.render.tile;
 
 import com.github.alexthe666.iceandfire.client.model.ModelDragonEgg;
 import com.github.alexthe666.iceandfire.entity.tile.TileEntityEggInIce;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.tileentity.TileEntityRenderer;
-import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 
-public class RenderEggInIce<T extends TileEntityEggInIce> extends TileEntityRenderer<T> {
+public class RenderEggInIce<T extends TileEntityEggInIce> extends BlockEntityRenderer<T> {
 
-    public RenderEggInIce(TileEntityRendererDispatcher p_i226016_1_) {
+    public RenderEggInIce(BlockEntityRenderDispatcher p_i226016_1_) {
         super(p_i226016_1_);
     }
 
     @Override
-    public void render(T egg, float partialTicks, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int combinedLightIn, int combinedOverlayIn) {
+    public void render(T egg, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightIn, int combinedOverlayIn) {
         ModelDragonEgg model = new ModelDragonEgg();
         if (egg.type != null) {
-            matrixStackIn.push();
+            matrixStackIn.pushPose();
             matrixStackIn.translate(0.5, -0.8F, 0.5F);
-            matrixStackIn.push();
+            matrixStackIn.pushPose();
             model.renderFrozen(egg);
-            model.render(matrixStackIn, bufferIn.getBuffer(RenderPodium.getEggTexture(egg.type)), combinedLightIn, combinedOverlayIn, 1.0F, 1.0F, 1.0F, 1.0F);
-            matrixStackIn.pop();
-            matrixStackIn.pop();
+            model.renderToBuffer(matrixStackIn, bufferIn.getBuffer(RenderPodium.getEggTexture(egg.type)), combinedLightIn, combinedOverlayIn, 1.0F, 1.0F, 1.0F, 1.0F);
+            matrixStackIn.popPose();
+            matrixStackIn.popPose();
         }
     }
 

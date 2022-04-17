@@ -4,14 +4,14 @@ import java.util.EnumSet;
 
 import com.github.alexthe666.iceandfire.entity.EntitySeaSerpent;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.pathfinding.Path;
-import net.minecraft.util.Hand;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.level.Level;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class SeaSerpentAIAttackMelee extends Goal {
     protected final int attackInterval = 20;
@@ -20,7 +20,7 @@ public class SeaSerpentAIAttackMelee extends Goal {
      * An amount of decrementing ticks that allows the entity to attack once the tick reaches 0.
      */
     protected int attackTick;
-    World world;
+    Level world;
     /**
      * The speed with which the mob will approach the target
      */
@@ -42,17 +42,17 @@ public class SeaSerpentAIAttackMelee extends Goal {
 
     public SeaSerpentAIAttackMelee(EntitySeaSerpent amphithere, double speedIn, boolean useLongMemory) {
         this.attacker = amphithere;
-        this.world = amphithere.world;
+        this.world = amphithere.level;
         this.speedTowardsTarget = speedIn;
         this.longMemory = useLongMemory;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
     /**
      * Returns whether the Goal should begin execution.
      */
-    public boolean shouldExecute() {
-        LivingEntity LivingEntity = this.attacker.getAttackTarget();
+    public boolean canUse() {
+        LivingEntity LivingEntity = this.attacker.getTarget();
 
         if (LivingEntity == null || this.attacker.shouldUseJumpAttack(LivingEntity) && this.attacker.jumpCooldown <= 0) {
             return false;
@@ -61,19 +61,19 @@ public class SeaSerpentAIAttackMelee extends Goal {
         } else {
             if (canPenalize) {
                 if (--this.delayCounter <= 0) {
-                    this.path = this.attacker.getNavigator().pathfind(LivingEntity, 0);
-                    this.delayCounter = 4 + this.attacker.getRNG().nextInt(7);
+                    this.path = this.attacker.getNavigation().createPath(LivingEntity, 0);
+                    this.delayCounter = 4 + this.attacker.getRandom().nextInt(7);
                     return this.path != null;
                 } else {
                     return true;
                 }
             }
-            this.path = this.attacker.getNavigator().pathfind(LivingEntity, 0);
+            this.path = this.attacker.getNavigation().createPath(LivingEntity, 0);
 
             if (this.path != null) {
                 return true;
             } else {
-                return this.getAttackReachSqr(LivingEntity) >= this.attacker.getDistanceSq(LivingEntity.getPosX(), LivingEntity.getBoundingBox().minY, LivingEntity.getPosZ());
+                return this.getAttackReachSqr(LivingEntity) >= this.attacker.distanceToSqr(LivingEntity.getX(), LivingEntity.getBoundingBox().minY, LivingEntity.getZ());
             }
         }
     }
@@ -81,27 +81,27 @@ public class SeaSerpentAIAttackMelee extends Goal {
     /**
      * Returns whether an in-progress Goal should continue executing
      */
-    public boolean shouldContinueExecuting() {
-        LivingEntity LivingEntity = this.attacker.getAttackTarget();
+    public boolean canContinueToUse() {
+        LivingEntity LivingEntity = this.attacker.getTarget();
 
         if (LivingEntity == null) {
             return false;
         } else if (!LivingEntity.isAlive()) {
             return false;
         } else if (!this.longMemory) {
-            return !this.attacker.getNavigator().noPath();
-        } else if (!this.attacker.isWithinHomeDistanceFromPosition(LivingEntity.getPosition())) {
+            return !this.attacker.getNavigation().isDone();
+        } else if (!this.attacker.isWithinRestriction(LivingEntity.blockPosition())) {
             return false;
         } else {
-            return !(LivingEntity instanceof PlayerEntity) || !LivingEntity.isSpectator() && !((PlayerEntity) LivingEntity).isCreative();
+            return !(LivingEntity instanceof Player) || !LivingEntity.isSpectator() && !((Player) LivingEntity).isCreative();
         }
     }
 
-    public void startExecuting() {
+    public void start() {
         if (attacker.isInWater()) {
-            this.attacker.getMoveHelper().setMoveTo(this.targetX, this.targetY, this.targetZ, 0.1F);
+            this.attacker.getMoveControl().setWantedPosition(this.targetX, this.targetY, this.targetZ, 0.1F);
         } else {
-            this.attacker.getNavigator().setPath(this.path, this.speedTowardsTarget);
+            this.attacker.getNavigation().moveTo(this.path, this.speedTowardsTarget);
         }
         this.delayCounter = 0;
     }
@@ -109,37 +109,37 @@ public class SeaSerpentAIAttackMelee extends Goal {
     /**
      * Reset the task's internal state. Called when this task is interrupted by another one
      */
-    public void resetTask() {
-        LivingEntity LivingEntity = this.attacker.getAttackTarget();
+    public void stop() {
+        LivingEntity LivingEntity = this.attacker.getTarget();
 
-        if (LivingEntity instanceof PlayerEntity && (LivingEntity.isSpectator() || ((PlayerEntity) LivingEntity).isCreative())) {
-            this.attacker.setAttackTarget(null);
+        if (LivingEntity instanceof Player && (LivingEntity.isSpectator() || ((Player) LivingEntity).isCreative())) {
+            this.attacker.setTarget(null);
         }
 
-        this.attacker.getNavigator().clearPath();
+        this.attacker.getNavigation().stop();
     }
 
     public void tick() {
-        LivingEntity LivingEntity = this.attacker.getAttackTarget();
+        LivingEntity LivingEntity = this.attacker.getTarget();
         if (LivingEntity != null) {
             if (attacker.isInWater()) {
-                this.attacker.getMoveHelper().setMoveTo(LivingEntity.getPosX(), LivingEntity.getPosY() + LivingEntity.getEyeHeight(), LivingEntity.getPosZ(), 0.1D);
+                this.attacker.getMoveControl().setWantedPosition(LivingEntity.getX(), LivingEntity.getY() + LivingEntity.getEyeHeight(), LivingEntity.getZ(), 0.1D);
             }
-            this.attacker.getLookController().setLookPositionWithEntity(LivingEntity, 30.0F, 30.0F);
-            double d0 = this.attacker.getDistanceSq(LivingEntity.getPosX(), LivingEntity.getBoundingBox().minY, LivingEntity.getPosZ());
+            this.attacker.getLookControl().setLookAt(LivingEntity, 30.0F, 30.0F);
+            double d0 = this.attacker.distanceToSqr(LivingEntity.getX(), LivingEntity.getBoundingBox().minY, LivingEntity.getZ());
             --this.delayCounter;
 
-            if ((this.longMemory || this.attacker.getEntitySenses().canSee(LivingEntity)) && this.delayCounter <= 0 && (this.targetX == 0.0D && this.targetY == 0.0D && this.targetZ == 0.0D || LivingEntity.getDistanceSq(this.targetX, this.targetY, this.targetZ) >= 1.0D || this.attacker.getRNG().nextFloat() < 0.05F)) {
-                this.targetX = LivingEntity.getPosX();
+            if ((this.longMemory || this.attacker.getSensing().canSee(LivingEntity)) && this.delayCounter <= 0 && (this.targetX == 0.0D && this.targetY == 0.0D && this.targetZ == 0.0D || LivingEntity.distanceToSqr(this.targetX, this.targetY, this.targetZ) >= 1.0D || this.attacker.getRandom().nextFloat() < 0.05F)) {
+                this.targetX = LivingEntity.getX();
                 this.targetY = LivingEntity.getBoundingBox().minY;
-                this.targetZ = LivingEntity.getPosZ();
-                this.delayCounter = 4 + this.attacker.getRNG().nextInt(7);
+                this.targetZ = LivingEntity.getZ();
+                this.delayCounter = 4 + this.attacker.getRandom().nextInt(7);
 
                 if (this.canPenalize) {
                     this.delayCounter += failedPathFindingPenalty;
-                    if (this.attacker.getNavigator().getPath() != null) {
-                        net.minecraft.pathfinding.PathPoint finalPathPoint = this.attacker.getNavigator().getPath().getFinalPathPoint();
-                        if (finalPathPoint != null && LivingEntity.getDistanceSq(finalPathPoint.x, finalPathPoint.y, finalPathPoint.z) < 1)
+                    if (this.attacker.getNavigation().getPath() != null) {
+                        net.minecraft.world.level.pathfinder.Node finalPathPoint = this.attacker.getNavigation().getPath().getEndNode();
+                        if (finalPathPoint != null && LivingEntity.distanceToSqr(finalPathPoint.x, finalPathPoint.y, finalPathPoint.z) < 1)
                             failedPathFindingPenalty = 0;
                         else
                             failedPathFindingPenalty += 10;
@@ -154,7 +154,7 @@ public class SeaSerpentAIAttackMelee extends Goal {
                     this.delayCounter += 5;
                 }
 
-                if (!this.attacker.getNavigator().tryMoveToEntityLiving(LivingEntity, this.speedTowardsTarget)) {
+                if (!this.attacker.getNavigation().moveTo(LivingEntity, this.speedTowardsTarget)) {
                     this.delayCounter += 15;
                 }
             }
@@ -167,12 +167,12 @@ public class SeaSerpentAIAttackMelee extends Goal {
         double d0 = this.getAttackReachSqr(enemy);
         if (this.attacker.isTouchingMob(enemy)) {
             this.attackTick = 20;
-            this.attacker.swingArm(Hand.MAIN_HAND);
-            this.attacker.attackEntityAsMob(enemy);
+            this.attacker.swing(InteractionHand.MAIN_HAND);
+            this.attacker.doHurtTarget(enemy);
         }
     }
 
     protected double getAttackReachSqr(LivingEntity attackTarget) {
-        return this.attacker.getWidth() * 2.0F * this.attacker.getWidth() * 2.0F + attackTarget.getWidth();
+        return this.attacker.getBbWidth() * 2.0F * this.attacker.getBbWidth() * 2.0F + attackTarget.getBbWidth();
     }
 }

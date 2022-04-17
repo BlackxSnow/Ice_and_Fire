@@ -1,15 +1,15 @@
 package com.github.alexthe666.iceandfire.entity.ai;
 
 import com.github.alexthe666.iceandfire.entity.EntitySeaSerpent;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.goal.JumpGoal;
-import net.minecraft.fluid.FluidState;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.goal.JumpGoal;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.util.Direction;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.core.Direction;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 public class SeaSerpentAIJump  extends JumpGoal {
     private static final int[] JUMP_DISTANCES = new int[]{0, 2, 4, 5, 6, 7};
@@ -22,14 +22,14 @@ public class SeaSerpentAIJump  extends JumpGoal {
         this.chance = chance;
     }
 
-    public boolean shouldExecute() {
-        if (this.serpent.getRNG().nextInt(this.chance) != 0 || serpent.getAttackTarget() != null || serpent.jumpCooldown != 0) {
+    public boolean canUse() {
+        if (this.serpent.getRandom().nextInt(this.chance) != 0 || serpent.getTarget() != null || serpent.jumpCooldown != 0) {
             return false;
         } else {
-            Direction direction = this.serpent.getAdjustedHorizontalFacing();
-            int i = direction.getXOffset();
-            int j = direction.getZOffset();
-            BlockPos blockpos = this.serpent.getPosition();
+            Direction direction = this.serpent.getMotionDirection();
+            int i = direction.getStepX();
+            int j = direction.getStepZ();
+            BlockPos blockpos = this.serpent.blockPosition();
             for (int k : JUMP_DISTANCES) {
                 if (!this.canJumpTo(blockpos, i, j, k) || !this.isAirAbove(blockpos, i, j, k)) {
                     return false;
@@ -40,44 +40,44 @@ public class SeaSerpentAIJump  extends JumpGoal {
     }
 
     private boolean canJumpTo(BlockPos pos, int dx, int dz, int scale) {
-        BlockPos blockpos = pos.add(dx * scale, 0, dz * scale);
-        return this.serpent.world.getFluidState(blockpos).isTagged(FluidTags.WATER) && !this.serpent.world.getBlockState(blockpos).getMaterial().blocksMovement();
+        BlockPos blockpos = pos.offset(dx * scale, 0, dz * scale);
+        return this.serpent.level.getFluidState(blockpos).is(FluidTags.WATER) && !this.serpent.level.getBlockState(blockpos).getMaterial().blocksMotion();
     }
 
     private boolean isAirAbove(BlockPos pos, int dx, int dz, int scale) {
-        return this.serpent.world.getBlockState(pos.add(dx * scale, 1, dz * scale)).isAir() && this.serpent.world.getBlockState(pos.add(dx * scale, 2, dz * scale)).isAir();
+        return this.serpent.level.getBlockState(pos.offset(dx * scale, 1, dz * scale)).isAir() && this.serpent.level.getBlockState(pos.offset(dx * scale, 2, dz * scale)).isAir();
     }
 
     /**
      * Returns whether an in-progress EntityAIBase should continue executing
      */
-    public boolean shouldContinueExecuting() {
-        double d0 = this.serpent.getMotion().y;
-        return serpent.jumpCooldown > 0 && (!(d0 * d0 < (double) 0.03F) || this.serpent.rotationPitch == 0.0F || !(Math.abs(this.serpent.rotationPitch) < 10.0F) || !this.serpent.isInWater()) && !this.serpent.isOnGround();
+    public boolean canContinueToUse() {
+        double d0 = this.serpent.getDeltaMovement().y;
+        return serpent.jumpCooldown > 0 && (!(d0 * d0 < (double) 0.03F) || this.serpent.xRot == 0.0F || !(Math.abs(this.serpent.xRot) < 10.0F) || !this.serpent.isInWater()) && !this.serpent.isOnGround();
     }
 
-    public boolean isPreemptible() {
+    public boolean isInterruptable() {
         return false;
     }
 
     /**
      * Execute a one shot task or start executing a continuous task
      */
-    public void startExecuting() {
-        Direction direction = this.serpent.getAdjustedHorizontalFacing();
-        float up = 1F + serpent.getRNG().nextFloat() * 0.8F;
-        this.serpent.setMotion(this.serpent.getMotion().add((double) direction.getXOffset() * 0.6D, up, (double) direction.getZOffset() * 0.6D));
+    public void start() {
+        Direction direction = this.serpent.getMotionDirection();
+        float up = 1F + serpent.getRandom().nextFloat() * 0.8F;
+        this.serpent.setDeltaMovement(this.serpent.getDeltaMovement().add((double) direction.getStepX() * 0.6D, up, (double) direction.getStepZ() * 0.6D));
         this.serpent.setJumpingOutOfWater(true);
-        this.serpent.getNavigator().clearPath();
-        this.serpent.jumpCooldown = serpent.getRNG().nextInt(100) + 100;
+        this.serpent.getNavigation().stop();
+        this.serpent.jumpCooldown = serpent.getRandom().nextInt(100) + 100;
     }
 
     /**
      * Reset the task's internal state. Called when this task is interrupted by another one
      */
-    public void resetTask() {
+    public void stop() {
         this.serpent.setJumpingOutOfWater(false);
-        this.serpent.rotationPitch = 0.0F;
+        this.serpent.xRot = 0.0F;
     }
 
     /**
@@ -86,21 +86,21 @@ public class SeaSerpentAIJump  extends JumpGoal {
     public void tick() {
         boolean flag = this.inWater;
         if (!flag) {
-            FluidState fluidstate = this.serpent.world.getFluidState(this.serpent.getPosition());
-            this.inWater = fluidstate.isTagged(FluidTags.WATER);
+            FluidState fluidstate = this.serpent.level.getFluidState(this.serpent.blockPosition());
+            this.inWater = fluidstate.is(FluidTags.WATER);
         }
 
         if (this.inWater && !flag) {
-            this.serpent.playSound(SoundEvents.ENTITY_DOLPHIN_JUMP, 1.0F, 1.0F);
+            this.serpent.playSound(SoundEvents.DOLPHIN_JUMP, 1.0F, 1.0F);
         }
 
-        Vector3d vector3d = this.serpent.getMotion();
-        if (vector3d.y * vector3d.y < (double) 0.1F && this.serpent.rotationPitch != 0.0F) {
-            this.serpent.rotationPitch = MathHelper.rotLerp(this.serpent.rotationPitch, 0.0F, 0.2F);
+        Vec3 vector3d = this.serpent.getDeltaMovement();
+        if (vector3d.y * vector3d.y < (double) 0.1F && this.serpent.xRot != 0.0F) {
+            this.serpent.xRot = Mth.rotlerp(this.serpent.xRot, 0.0F, 0.2F);
         } else {
-            double d0 = Math.sqrt(Entity.horizontalMag(vector3d));
+            double d0 = Math.sqrt(Entity.getHorizontalDistanceSqr(vector3d));
             double d1 = Math.signum(-vector3d.y) * Math.acos(d0 / vector3d.length()) * (double) (180F / (float) Math.PI);
-            this.serpent.rotationPitch = (float) d1;
+            this.serpent.xRot = (float) d1;
         }
 
     }

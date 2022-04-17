@@ -2,9 +2,9 @@ package com.github.alexthe666.iceandfire.world.gen;
 
 import java.util.Random;
 
-import net.minecraft.block.Block;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.LevelAccessor;
 
 public class WorldGenCaveStalactites {
     private Block block;
@@ -15,16 +15,16 @@ public class WorldGenCaveStalactites {
         this.maxHeight = maxHeight;
     }
 
-    public boolean generate(IWorld worldIn, Random rand, BlockPos position) {
+    public boolean generate(LevelAccessor worldIn, Random rand, BlockPos position) {
         int height = maxHeight + rand.nextInt(3);
         for (int i = 0; i < height; i++) {
             if (i < height / 2) {
-                worldIn.setBlockState(position.down(i).north(), block.getDefaultState(), 2);
-                worldIn.setBlockState(position.down(i).east(), block.getDefaultState(), 2);
-                worldIn.setBlockState(position.down(i).south(), block.getDefaultState(), 2);
-                worldIn.setBlockState(position.down(i).west(), block.getDefaultState(), 2);
+                worldIn.setBlock(position.below(i).north(), block.defaultBlockState(), 2);
+                worldIn.setBlock(position.below(i).east(), block.defaultBlockState(), 2);
+                worldIn.setBlock(position.below(i).south(), block.defaultBlockState(), 2);
+                worldIn.setBlock(position.below(i).west(), block.defaultBlockState(), 2);
             }
-            worldIn.setBlockState(position.down(i), block.getDefaultState(), 2);
+            worldIn.setBlock(position.below(i), block.defaultBlockState(), 2);
         }
         return true;
     }

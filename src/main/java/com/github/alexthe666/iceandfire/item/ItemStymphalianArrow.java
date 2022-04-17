@@ -8,31 +8,31 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.EntityStymphalianArrow;
 import com.github.alexthe666.iceandfire.entity.IafEntityRegistry;
 
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.projectile.AbstractArrowEntity;
-import net.minecraft.item.ArrowItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.item.ArrowItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.Level;
 
 public class ItemStymphalianArrow extends ArrowItem {
 
     public ItemStymphalianArrow() {
-        super(new Item.Properties().group(IceAndFire.TAB_ITEMS));
+        super(new Item.Properties().tab(IceAndFire.TAB_ITEMS));
         this.setRegistryName(IceAndFire.MODID, "stymphalian_arrow");
     }
 
-    public AbstractArrowEntity createArrow(World worldIn, ItemStack stack, LivingEntity shooter) {
+    public AbstractArrow createArrow(Level worldIn, ItemStack stack, LivingEntity shooter) {
         return new EntityStymphalianArrow(IafEntityRegistry.STYMPHALIAN_ARROW, worldIn, shooter);
     }
 
     @Override
-    public void addInformation(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
-        tooltip.add(new TranslationTextComponent("item.iceandfire.stymphalian_arrow.desc").mergeStyle(TextFormatting.GRAY));
+    public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> tooltip, TooltipFlag flagIn) {
+        tooltip.add(new TranslatableComponent("item.iceandfire.stymphalian_arrow.desc").withStyle(ChatFormatting.GRAY));
     }
 
 }

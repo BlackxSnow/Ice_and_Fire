@@ -12,16 +12,16 @@ import com.github.alexthe666.iceandfire.event.ServerEvents;
 import com.github.alexthe666.iceandfire.misc.IafSoundRegistry;
 
 import com.github.alexthe666.iceandfire.world.IafWorldRegistry;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.gen.feature.Feature;
-import net.minecraft.world.gen.feature.structure.Structure;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.Direction;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.feature.StructureFeature;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -53,8 +53,8 @@ public class CommonProxy {
     }
 
     @SubscribeEvent
-    public static void registerStructures(final RegistryEvent.Register<Structure<?>> event) {
-        for (Structure<?> feature : IafWorldRegistry.structureFeatureList) {
+    public static void registerStructures(final RegistryEvent.Register<StructureFeature<?>> event) {
+        for (StructureFeature<?> feature : IafWorldRegistry.structureFeatureList) {
             event.getRegistry().register(feature);
         }
     }
@@ -152,11 +152,11 @@ public class CommonProxy {
     public void setReferencedMob(Entity dragonBase) {
     }
 
-    public TileEntity getRefrencedTE() {
+    public BlockEntity getRefrencedTE() {
         return null;
     }
 
-    public void setRefrencedTE(TileEntity tileEntity) {
+    public void setRefrencedTE(BlockEntity tileEntity) {
     }
 
     public Item.Properties setupISTER(Item.Properties group) {
@@ -166,7 +166,7 @@ public class CommonProxy {
     public void setupClient() {
     }
 
-    public PlayerEntity getClientSidePlayer(){
+    public Player getClientSidePlayer(){
         return null;
     }
 

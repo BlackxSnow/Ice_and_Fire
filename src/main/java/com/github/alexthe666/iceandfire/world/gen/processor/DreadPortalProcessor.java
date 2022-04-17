@@ -6,45 +6,45 @@ import javax.annotation.Nullable;
 
 import com.github.alexthe666.iceandfire.block.IafBlockRegistry;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorldReader;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.gen.feature.template.IStructureProcessorType;
-import net.minecraft.world.gen.feature.template.PlacementSettings;
-import net.minecraft.world.gen.feature.template.StructureProcessor;
-import net.minecraft.world.gen.feature.template.Template;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessor;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
 public class DreadPortalProcessor extends StructureProcessor {
 
     private float integrity = 1.0F;
 
-    public DreadPortalProcessor(BlockPos position, PlacementSettings settings, Biome biome) {
+    public DreadPortalProcessor(BlockPos position, StructurePlaceSettings settings, Biome biome) {
     }
 
     public static BlockState getRandomCrackedBlock(@Nullable BlockState prev, Random random) {
         float rand = random.nextFloat();
         if (rand < 0.3) {
-            return IafBlockRegistry.DREAD_STONE_BRICKS.getDefaultState();
+            return IafBlockRegistry.DREAD_STONE_BRICKS.defaultBlockState();
         } else if (rand < 0.6) {
-            return IafBlockRegistry.DREAD_STONE_BRICKS_CRACKED.getDefaultState();
+            return IafBlockRegistry.DREAD_STONE_BRICKS_CRACKED.defaultBlockState();
         } else {
-            return IafBlockRegistry.DREAD_STONE_BRICKS_MOSSY.getDefaultState();
+            return IafBlockRegistry.DREAD_STONE_BRICKS_MOSSY.defaultBlockState();
         }
     }
 
     @Nullable
     @Override
-    public Template.BlockInfo process(IWorldReader world, BlockPos pos, BlockPos p_230386_3_, Template.BlockInfo blockInfoIn, Template.BlockInfo p_230386_5_, PlacementSettings settings, @Nullable Template template) {
+    public StructureTemplate.StructureBlockInfo process(LevelReader world, BlockPos pos, BlockPos p_230386_3_, StructureTemplate.StructureBlockInfo blockInfoIn, StructureTemplate.StructureBlockInfo p_230386_5_, StructurePlaceSettings settings, @Nullable StructureTemplate template) {
         Random random = settings.getRandom(pos);
         if (random.nextFloat() <= integrity) {
             if (blockInfoIn.state.getBlock() == Blocks.DIAMOND_BLOCK) {
-                return new Template.BlockInfo(pos, IafBlockRegistry.DREAD_PORTAL.getDefaultState(), null);
+                return new StructureTemplate.StructureBlockInfo(pos, IafBlockRegistry.DREAD_PORTAL.defaultBlockState(), null);
             }
             if (blockInfoIn.state.getBlock() == IafBlockRegistry.DREAD_STONE_BRICKS) {
                 BlockState state = getRandomCrackedBlock(null, random);
-                return new Template.BlockInfo(pos, state, null);
+                return new StructureTemplate.StructureBlockInfo(pos, state, null);
             }
             return blockInfoIn;
         }
@@ -53,8 +53,8 @@ public class DreadPortalProcessor extends StructureProcessor {
     }
 
     @Override
-    protected IStructureProcessorType getType() {
-        return IStructureProcessorType.BLOCK_ROT;
+    protected StructureProcessorType getType() {
+        return StructureProcessorType.BLOCK_ROT;
     }
 
 }

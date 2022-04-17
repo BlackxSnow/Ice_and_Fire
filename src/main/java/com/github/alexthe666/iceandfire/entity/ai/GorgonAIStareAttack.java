@@ -4,8 +4,8 @@ import java.util.EnumSet;
 
 import com.github.alexthe666.iceandfire.entity.EntityGorgon;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.Goal;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
 
 public class GorgonAIStareAttack extends Goal {
     private final EntityGorgon entity;
@@ -23,41 +23,41 @@ public class GorgonAIStareAttack extends Goal {
         this.moveSpeedAmp = speedAmplifier;
         this.attackCooldown = delay;
         this.maxAttackDistance = maxDistance * maxDistance;
-        this.setMutexFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
     public void setAttackCooldown(int cooldown) {
         this.attackCooldown = cooldown;
     }
 
-    public boolean shouldExecute() {
-        return this.entity.getAttackTarget() != null;
+    public boolean canUse() {
+        return this.entity.getTarget() != null;
     }
 
-    public boolean shouldContinueExecuting() {
-        return (this.shouldExecute() || !this.entity.getNavigator().noPath());
+    public boolean canContinueToUse() {
+        return (this.canUse() || !this.entity.getNavigation().isDone());
     }
 
-    public void resetTask() {
-        super.resetTask();
+    public void stop() {
+        super.stop();
         this.seeTime = 0;
         this.attackTime = -1;
-        this.entity.resetActiveHand();
+        this.entity.stopUsingItem();
     }
 
     public void tick() {
-        LivingEntity LivingEntity = this.entity.getAttackTarget();
+        LivingEntity LivingEntity = this.entity.getTarget();
 
         if (LivingEntity != null) {
             if (EntityGorgon.isStoneMob(LivingEntity)) {
-                entity.setAttackTarget(null);
-                resetTask();
+                entity.setTarget(null);
+                stop();
                 return;
             }
-            this.entity.getLookController().setLookPosition(LivingEntity.getPosX(), LivingEntity.getPosY() + (double) LivingEntity.getEyeHeight(), LivingEntity.getPosZ(), (float) this.entity.getHorizontalFaceSpeed(), (float) this.entity.getVerticalFaceSpeed());
+            this.entity.getLookControl().setLookAt(LivingEntity.getX(), LivingEntity.getY() + (double) LivingEntity.getEyeHeight(), LivingEntity.getZ(), (float) this.entity.getMaxHeadYRot(), (float) this.entity.getMaxHeadXRot());
 
-            double d0 = this.entity.getDistanceSq(LivingEntity.getPosX(), LivingEntity.getBoundingBox().minY, LivingEntity.getPosZ());
-            boolean flag = this.entity.getEntitySenses().canSee(LivingEntity);
+            double d0 = this.entity.distanceToSqr(LivingEntity.getX(), LivingEntity.getBoundingBox().minY, LivingEntity.getZ());
+            boolean flag = this.entity.getSensing().canSee(LivingEntity);
             boolean flag1 = this.seeTime > 0;
 
             if (flag != flag1) {
@@ -71,19 +71,19 @@ public class GorgonAIStareAttack extends Goal {
             }
 
             if (d0 <= (double) this.maxAttackDistance && this.seeTime >= 20) {
-                this.entity.getNavigator().clearPath();
+                this.entity.getNavigation().stop();
                 ++this.strafingTime;
             } else {
-                this.entity.getNavigator().tryMoveToEntityLiving(LivingEntity, this.moveSpeedAmp);
+                this.entity.getNavigation().moveTo(LivingEntity, this.moveSpeedAmp);
                 this.strafingTime = -1;
             }
 
             if (this.strafingTime >= 20) {
-                if ((double) this.entity.getRNG().nextFloat() < 0.3D) {
+                if ((double) this.entity.getRandom().nextFloat() < 0.3D) {
                     this.strafingClockwise = !this.strafingClockwise;
                 }
 
-                if ((double) this.entity.getRNG().nextFloat() < 0.3D) {
+                if ((double) this.entity.getRandom().nextFloat() < 0.3D) {
                     this.strafingBackwards = !this.strafingBackwards;
                 }
 
@@ -97,11 +97,11 @@ public class GorgonAIStareAttack extends Goal {
                     this.strafingBackwards = true;
                 }
 
-                this.entity.getMoveHelper().strafe(this.strafingBackwards ? -0.5F : 0.5F, this.strafingClockwise ? 0.5F : -0.5F);
-                this.entity.getLookController().setLookPosition(LivingEntity.getPosX(), LivingEntity.getPosY() + (double) LivingEntity.getEyeHeight(), LivingEntity.getPosZ(), (float) this.entity.getHorizontalFaceSpeed(), (float) this.entity.getVerticalFaceSpeed());
+                this.entity.getMoveControl().strafe(this.strafingBackwards ? -0.5F : 0.5F, this.strafingClockwise ? 0.5F : -0.5F);
+                this.entity.getLookControl().setLookAt(LivingEntity.getX(), LivingEntity.getY() + (double) LivingEntity.getEyeHeight(), LivingEntity.getZ(), (float) this.entity.getMaxHeadYRot(), (float) this.entity.getMaxHeadXRot());
                 this.entity.forcePreyToLook(LivingEntity);
             } else {
-                this.entity.getLookController().setLookPositionWithEntity(LivingEntity, 30.0F, 30.0F);
+                this.entity.getLookControl().setLookAt(LivingEntity, 30.0F, 30.0F);
                 this.entity.forcePreyToLook(LivingEntity);
             }
 

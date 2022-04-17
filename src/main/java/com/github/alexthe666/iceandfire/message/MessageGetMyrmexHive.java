@@ -6,29 +6,29 @@ import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.util.MyrmexHive;
 import com.github.alexthe666.iceandfire.world.MyrmexWorldData;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.PacketBuffer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 
 public class MessageGetMyrmexHive {
 
-    public CompoundNBT hive;
+    public CompoundTag hive;
 
-    public MessageGetMyrmexHive(CompoundNBT hive) {
+    public MessageGetMyrmexHive(CompoundTag hive) {
         this.hive = hive;
     }
 
     public MessageGetMyrmexHive() {
     }
 
-    public static MessageGetMyrmexHive read(PacketBuffer buf) {
-        return new MessageGetMyrmexHive(buf.readCompoundTag());
+    public static MessageGetMyrmexHive read(FriendlyByteBuf buf) {
+        return new MessageGetMyrmexHive(buf.readNbt());
     }
 
-    public static void write(MessageGetMyrmexHive message, PacketBuffer buf) {
-        buf.writeCompoundTag(message.hive);
+    public static void write(MessageGetMyrmexHive message, FriendlyByteBuf buf) {
+        buf.writeNbt(message.hive);
     }
 
     public static class Handler {
@@ -36,9 +36,9 @@ public class MessageGetMyrmexHive {
         }
 
         public static void handle(MessageGetMyrmexHive message, Supplier<NetworkEvent.Context> context) {
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             MyrmexHive serverHive = MyrmexHive.fromNBT(message.hive);
-            CompoundNBT tag = new CompoundNBT();
+            CompoundTag tag = new CompoundTag();
             serverHive.writeVillageDataToNBT(tag);
             serverHive.readVillageDataFromNBT(tag);
             IceAndFire.PROXY.setReferencedHive(serverHive);
@@ -46,8 +46,8 @@ public class MessageGetMyrmexHive {
             if(context.get().getDirection().getReceptionSide() == LogicalSide.CLIENT){
                 player = IceAndFire.PROXY.getClientSidePlayer();
             }else{
-                if(MyrmexWorldData.get(player.world) != null){
-                    MyrmexHive realHive = MyrmexWorldData.get(player.world).getHiveFromUUID(serverHive.hiveUUID);
+                if(MyrmexWorldData.get(player.level) != null){
+                    MyrmexHive realHive = MyrmexWorldData.get(player.level).getHiveFromUUID(serverHive.hiveUUID);
                     realHive.readVillageDataFromNBT(serverHive.toNBT());
                 }
             }

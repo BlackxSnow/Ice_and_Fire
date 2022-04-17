@@ -10,36 +10,36 @@ import com.github.alexthe666.iceandfire.entity.tile.TileEntityGhostChest;
 import com.github.alexthe666.iceandfire.item.IafItemRegistry;
 import com.github.alexthe666.iceandfire.item.ItemDeathwormGauntlet;
 import com.github.alexthe666.iceandfire.item.ItemTrollWeapon;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.model.ItemCameraTransforms;
-import net.minecraft.client.renderer.tileentity.ItemStackTileEntityRenderer;
-import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import com.mojang.math.Vector3f;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class IceAndFireTEISR extends ItemStackTileEntityRenderer {
+public class IceAndFireTEISR extends BlockEntityWithoutLevelRenderer {
 
     private static final ModelTideTrident TIDE_TRIDENT_MODEL = new ModelTideTrident();
     private final RenderTrollWeapon renderTrollWeapon = new RenderTrollWeapon();
     private final RenderDeathWormGauntlet renderDeathWormGauntlet = new RenderDeathWormGauntlet();
-    private final RenderDreadPortal renderDreadPortal = new RenderDreadPortal(TileEntityRendererDispatcher.instance);
+    private final RenderDreadPortal renderDreadPortal = new RenderDreadPortal(BlockEntityRenderDispatcher.instance);
     private final RenderGorgonHead renderGorgonHead = new RenderGorgonHead(true);
     private final RenderGorgonHead renderGorgonHeadDead = new RenderGorgonHead(false);
-    private final RenderPixieHouse renderPixieHouse = new RenderPixieHouse(TileEntityRendererDispatcher.instance);
+    private final RenderPixieHouse renderPixieHouse = new RenderPixieHouse(BlockEntityRenderDispatcher.instance);
     private final TileEntityDreadPortal dreadPortalDummy = new TileEntityDreadPortal();
-    private final RenderGhostChest renderGhostChest = new RenderGhostChest(TileEntityRendererDispatcher.instance);
+    private final RenderGhostChest renderGhostChest = new RenderGhostChest(BlockEntityRenderDispatcher.instance);
     private final TileEntityGhostChest ghostChestDummy = new TileEntityGhostChest();
 
     @Override
-    public void func_239207_a_(ItemStack itemStackIn, ItemCameraTransforms.TransformType p_239207_2_, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int combinedLightIn, int combinedOverlayIn) {
+    public void renderByItem(ItemStack itemStackIn, ItemTransforms.TransformType p_239207_2_, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightIn, int combinedOverlayIn) {
         if (itemStackIn.getItem() == IafItemRegistry.GORGON_HEAD) {
             if (itemStackIn.getTag() != null) {
                 if (itemStackIn.getTag().getBoolean("Active")) {
@@ -69,19 +69,19 @@ public class IceAndFireTEISR extends ItemStackTileEntityRenderer {
         }
         if (itemStackIn.getItem() == IafItemRegistry.TIDE_TRIDENT) {
             matrixStackIn.translate(0.5F, 0.5f, 0.5f);
-            if (p_239207_2_ == ItemCameraTransforms.TransformType.GUI || p_239207_2_ == ItemCameraTransforms.TransformType.FIXED || p_239207_2_ == ItemCameraTransforms.TransformType.NONE || p_239207_2_ == ItemCameraTransforms.TransformType.GROUND) {
-                Minecraft.getInstance().getItemRenderer().renderItem(new ItemStack(IafItemRegistry.TIDE_TRIDENT_INVENTORY), p_239207_2_, p_239207_2_ == ItemCameraTransforms.TransformType.GROUND ? combinedLightIn : 240, combinedOverlayIn, matrixStackIn, bufferIn);
+            if (p_239207_2_ == ItemTransforms.TransformType.GUI || p_239207_2_ == ItemTransforms.TransformType.FIXED || p_239207_2_ == ItemTransforms.TransformType.NONE || p_239207_2_ == ItemTransforms.TransformType.GROUND) {
+                Minecraft.getInstance().getItemRenderer().renderStatic(new ItemStack(IafItemRegistry.TIDE_TRIDENT_INVENTORY), p_239207_2_, p_239207_2_ == ItemTransforms.TransformType.GROUND ? combinedLightIn : 240, combinedOverlayIn, matrixStackIn, bufferIn);
             } else {
-                matrixStackIn.push();
+                matrixStackIn.pushPose();
                 matrixStackIn.translate(0, 0.2F, -0.15F);
-                if(p_239207_2_.isFirstPerson()){
-                    matrixStackIn.translate(p_239207_2_ == ItemCameraTransforms.TransformType.FIRST_PERSON_LEFT_HAND ? -0.3F : 0.3F, 0.2F, -0.2F);
+                if(p_239207_2_.firstPerson()){
+                    matrixStackIn.translate(p_239207_2_ == ItemTransforms.TransformType.FIRST_PERSON_LEFT_HAND ? -0.3F : 0.3F, 0.2F, -0.2F);
                 }else{
                     matrixStackIn.translate(0, 0.6F, 0.0F);
                 }
-                matrixStackIn.rotate(Vector3f.XP.rotationDegrees(160));
-                TIDE_TRIDENT_MODEL.render(matrixStackIn, bufferIn.getBuffer(RenderType.getEntityCutoutNoCull(RenderTideTrident.TRIDENT)), combinedLightIn, combinedOverlayIn, 1.0F, 1.0F, 1.0F, 1.0F);
-                matrixStackIn.pop();
+                matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(160));
+                TIDE_TRIDENT_MODEL.renderToBuffer(matrixStackIn, bufferIn.getBuffer(RenderType.entityCutoutNoCull(RenderTideTrident.TRIDENT)), combinedLightIn, combinedOverlayIn, 1.0F, 1.0F, 1.0F, 1.0F);
+                matrixStackIn.popPose();
             }
 
         }

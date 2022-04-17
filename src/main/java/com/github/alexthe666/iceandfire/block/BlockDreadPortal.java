@@ -9,40 +9,40 @@ import com.github.alexthe666.iceandfire.entity.tile.TileEntityDreadPortal;
 import com.github.alexthe666.iceandfire.entity.util.DragonUtils;
 import com.github.alexthe666.iceandfire.item.ICustomRendered;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ContainerBlock;
-import net.minecraft.block.material.Material;
-import net.minecraft.entity.Entity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.World;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.ToolType;
 
-import net.minecraft.block.AbstractBlock.Properties;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
-public class BlockDreadPortal extends ContainerBlock implements IDreadBlock, ICustomRendered {
+public class BlockDreadPortal extends BaseEntityBlock implements IDreadBlock, ICustomRendered {
 
     public BlockDreadPortal() {
         super(
     		Properties
-    			.create(Material.PORTAL)
-    			.variableOpacity()
-    			.hardnessAndResistance(-1, 100000)
+    			.of(Material.PORTAL)
+    			.dynamicShape()
+    			.strength(-1, 100000)
     			.harvestTool(ToolType.PICKAXE)
-    			.setLightLevel((state) -> { return 1; })
-    			.tickRandomly()
+    			.lightLevel((state) -> { return 1; })
+    			.randomTicks()
 		);
 
         this.setRegistryName(IceAndFire.MODID, "dread_portal");
     }
 
     @Override
-    public void onEntityCollision(BlockState state, World worldIn, BlockPos pos, Entity entity) {
+    public void entityInside(BlockState state, Level worldIn, BlockPos pos, Entity entity) {
      /* if(entity.dimension != IafConfig.dreadlandsDimensionId){
             MiscEntityProperties properties = EntityPropertiesHandler.INSTANCE.getProperties(entity, MiscEntityProperties.class);
             if (properties != null) {
@@ -74,23 +74,23 @@ public class BlockDreadPortal extends ContainerBlock implements IDreadBlock, ICu
     }
 
 
-    public void updateTick(World worldIn, BlockPos pos, BlockState state, Random rand) {
+    public void updateTick(Level worldIn, BlockPos pos, BlockState state, Random rand) {
         if (!this.canSurviveAt(worldIn, pos)) {
             worldIn.destroyBlock(pos, true);
         }
     }
 
-    public void neighborChanged(BlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
+    public void neighborChanged(BlockState state, Level worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
         if (!this.canSurviveAt(worldIn, pos)) {
             worldIn.destroyBlock(pos, true);
         }
     }
 
-    public boolean canSurviveAt(World world, BlockPos pos) {
-        return DragonUtils.isDreadBlock(world.getBlockState(pos.up())) && DragonUtils.isDreadBlock(world.getBlockState(pos.down()));
+    public boolean canSurviveAt(Level world, BlockPos pos) {
+        return DragonUtils.isDreadBlock(world.getBlockState(pos.above())) && DragonUtils.isDreadBlock(world.getBlockState(pos.below()));
     }
 
-    public TileEntity createNewTileEntity(World worldIn, int meta) {
+    public BlockEntity createNewTileEntity(Level worldIn, int meta) {
         return new TileEntityDreadPortal();
     }
 
@@ -99,8 +99,8 @@ public class BlockDreadPortal extends ContainerBlock implements IDreadBlock, ICu
     }
 
     @OnlyIn(Dist.CLIENT)
-    public void animateTick(BlockState stateIn, World worldIn, BlockPos pos, Random rand) {
-        TileEntity tileentity = worldIn.getTileEntity(pos);
+    public void animateTick(BlockState stateIn, Level worldIn, BlockPos pos, Random rand) {
+        BlockEntity tileentity = worldIn.getBlockEntity(pos);
 
         if (tileentity instanceof TileEntityDreadPortal) {
             int i = 3;
@@ -126,13 +126,13 @@ public class BlockDreadPortal extends ContainerBlock implements IDreadBlock, ICu
         return false;
     }
 
-    public BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.ENTITYBLOCK_ANIMATED;
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.ENTITYBLOCK_ANIMATED;
     }
 
     @Nullable
     @Override
-    public TileEntity createNewTileEntity(IBlockReader worldIn) {
+    public BlockEntity newBlockEntity(BlockGetter worldIn) {
         return new TileEntityDreadPortal();
     }
 }

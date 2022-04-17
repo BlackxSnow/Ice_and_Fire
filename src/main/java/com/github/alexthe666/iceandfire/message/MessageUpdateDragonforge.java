@@ -5,9 +5,9 @@ import java.util.function.Supplier;
 import com.github.alexthe666.iceandfire.IceAndFire;
 import com.github.alexthe666.iceandfire.entity.tile.TileEntityDragonforge;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -25,11 +25,11 @@ public class MessageUpdateDragonforge {
     public MessageUpdateDragonforge() {
     }
 
-    public static MessageUpdateDragonforge read(PacketBuffer buf) {
+    public static MessageUpdateDragonforge read(FriendlyByteBuf buf) {
         return new MessageUpdateDragonforge(buf.readLong(), buf.readInt());
     }
 
-    public static void write(MessageUpdateDragonforge message, PacketBuffer buf) {
+    public static void write(MessageUpdateDragonforge message, FriendlyByteBuf buf) {
         buf.writeLong(message.blockPos);
         buf.writeInt(message.cookTime);
     }
@@ -41,16 +41,16 @@ public class MessageUpdateDragonforge {
 
         public static void handle(MessageUpdateDragonforge message, Supplier<NetworkEvent.Context> context) {
             context.get().setPacketHandled(true);
-            PlayerEntity player = context.get().getSender();
+            Player player = context.get().getSender();
             if(context.get().getDirection().getReceptionSide() == LogicalSide.CLIENT){
                 player = IceAndFire.PROXY.getClientSidePlayer();
             }
             if (player != null) {
-                if (player.world != null) {
-                    BlockPos pos = BlockPos.fromLong(message.blockPos);
-                    if (player.world.getTileEntity(pos) != null) {
-                        if (player.world.getTileEntity(pos) instanceof TileEntityDragonforge) {
-                            TileEntityDragonforge house = (TileEntityDragonforge) player.world.getTileEntity(pos);
+                if (player.level != null) {
+                    BlockPos pos = BlockPos.of(message.blockPos);
+                    if (player.level.getBlockEntity(pos) != null) {
+                        if (player.level.getBlockEntity(pos) instanceof TileEntityDragonforge) {
+                            TileEntityDragonforge house = (TileEntityDragonforge) player.level.getBlockEntity(pos);
                             house.cookTime = message.cookTime;
                             if(message.cookTime > 0){
                                 house.lastDragonFlameTimer = 40;

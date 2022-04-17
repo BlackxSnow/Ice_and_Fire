@@ -4,21 +4,21 @@ import java.util.Random;
 
 import com.github.alexthe666.iceandfire.IceAndFire;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.GrassPathBlock;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.item.Item;
-import net.minecraft.state.BooleanProperty;
-import net.minecraft.state.StateContainer;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.GrassPathBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.ToolType;
 
-import net.minecraft.block.AbstractBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public class BlockCharedPath extends GrassPathBlock {
     public static final BooleanProperty REVERTS = BooleanProperty.create("revert");
@@ -28,19 +28,19 @@ public class BlockCharedPath extends GrassPathBlock {
     @SuppressWarnings("deprecation")
     public BlockCharedPath(int dragonType) {
         super(
-    		AbstractBlock.Properties
-    			.create(Material.PLANTS)
-    			.sound(dragonType != 1 ? SoundType.GROUND : SoundType.GLASS)
-    			.hardnessAndResistance(0.6F).harvestTool(ToolType.SHOVEL)
+    		BlockBehaviour.Properties
+    			.of(Material.PLANT)
+    			.sound(dragonType != 1 ? SoundType.GRAVEL : SoundType.GLASS)
+    			.strength(0.6F).harvestTool(ToolType.SHOVEL)
     			.harvestLevel(0)
-    			.slipperiness(dragonType != 1 ? 0.6F : 0.98F)
-    			.tickRandomly()
-    			.setRequiresTool()
+    			.friction(dragonType != 1 ? 0.6F : 0.98F)
+    			.randomTicks()
+    			.requiresCorrectToolForDrops()
 		);
 
         this.dragonType = dragonType;
         setRegistryName(IceAndFire.MODID, getNameFromType(dragonType));
-        this.setDefaultState(stateContainer.getBaseState().with(REVERTS, Boolean.valueOf(false)));
+        this.registerDefaultState(stateDefinition.any().setValue(REVERTS, Boolean.valueOf(false)));
     }
 
     public String getNameFromType(int dragonType){
@@ -58,45 +58,45 @@ public class BlockCharedPath extends GrassPathBlock {
     public BlockState getSmushedState(int dragonType){
         switch (dragonType){
             case 0:
-                return IafBlockRegistry.CHARRED_DIRT.getDefaultState();
+                return IafBlockRegistry.CHARRED_DIRT.defaultBlockState();
             case 1:
-                return  IafBlockRegistry.FROZEN_DIRT.getDefaultState();
+                return  IafBlockRegistry.FROZEN_DIRT.defaultBlockState();
             case 2:
-                return IafBlockRegistry.CRACKLED_DIRT.getDefaultState();
+                return IafBlockRegistry.CRACKLED_DIRT.defaultBlockState();
         }
         return null;
     }
 
-    public void tick(BlockState state, ServerWorld worldIn, BlockPos pos, Random rand) {
+    public void tick(BlockState state, ServerLevel worldIn, BlockPos pos, Random rand) {
         super.tick(state, worldIn, pos, rand);
-        if (!worldIn.isRemote) {
+        if (!worldIn.isClientSide) {
             if (!worldIn.isAreaLoaded(pos, 3))
                 return;
-            if (state.get(REVERTS) && rand.nextInt(3) == 0) {
-                worldIn.setBlockState(pos, Blocks.GRASS_PATH.getDefaultState());
+            if (state.getValue(REVERTS) && rand.nextInt(3) == 0) {
+                worldIn.setBlockAndUpdate(pos, Blocks.GRASS_PATH.defaultBlockState());
             }
         }
-        if (worldIn.getBlockState(pos.up()).getMaterial().isSolid()) {
-            worldIn.setBlockState(pos, getSmushedState(dragonType));
+        if (worldIn.getBlockState(pos.above()).getMaterial().isSolid()) {
+            worldIn.setBlockAndUpdate(pos, getSmushedState(dragonType));
         }
         updateBlockState(worldIn, pos);
     }
 
-    private void updateBlockState(World worldIn, BlockPos pos) {
-        if (worldIn.getBlockState(pos.up()).getMaterial().isSolid()) {
-            worldIn.setBlockState(pos, getSmushedState(dragonType));
+    private void updateBlockState(Level worldIn, BlockPos pos) {
+        if (worldIn.getBlockState(pos.above()).getMaterial().isSolid()) {
+            worldIn.setBlockAndUpdate(pos, getSmushedState(dragonType));
         }
     }
 
     public BlockState getStateFromMeta(int meta) {
-        return this.getDefaultState().with(REVERTS, meta == 1);
+        return this.defaultBlockState().setValue(REVERTS, meta == 1);
     }
 
     public int getMetaFromState(BlockState state) {
-        return state.get(REVERTS) ? 1 : 0;
+        return state.getValue(REVERTS) ? 1 : 0;
     }
 
-    protected void fillStateContainer(StateContainer.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(REVERTS);
     }
 }

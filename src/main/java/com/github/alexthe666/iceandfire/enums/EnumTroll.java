@@ -12,11 +12,11 @@ import com.github.alexthe666.iceandfire.item.ItemTrollArmor;
 import com.github.alexthe666.iceandfire.item.ItemTrollLeather;
 import com.github.alexthe666.iceandfire.item.ItemTrollWeapon;
 
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.IArmorMaterial;
-import net.minecraft.item.Item;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ArmorMaterial;
+import net.minecraft.world.item.Item;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.biome.Biome;
 
 
 public enum EnumTroll {
@@ -27,7 +27,7 @@ public enum EnumTroll {
     public ResourceLocation TEXTURE;
     public ResourceLocation TEXTURE_STONE;
     public ResourceLocation TEXTURE_EYES;
-    public IArmorMaterial material;
+    public ArmorMaterial material;
     public Item leather;
     public Item helmet;
     public Item chestplate;
@@ -42,10 +42,10 @@ public enum EnumTroll {
         TEXTURE_STONE = new ResourceLocation("iceandfire:textures/models/troll/troll_" + this.name().toLowerCase(Locale.ROOT) + "_stone.png");
         TEXTURE_EYES = new ResourceLocation("iceandfire:textures/models/troll/troll_" + this.name().toLowerCase(Locale.ROOT) + "_eyes.png");
         leather = new ItemTrollLeather(this);
-        helmet = new ItemTrollArmor(this, material, EquipmentSlotType.HEAD);
-        chestplate = new ItemTrollArmor(this, material, EquipmentSlotType.CHEST);
-        leggings = new ItemTrollArmor(this, material, EquipmentSlotType.LEGS);
-        boots = new ItemTrollArmor(this, material, EquipmentSlotType.FEET);
+        helmet = new ItemTrollArmor(this, material, EquipmentSlot.HEAD);
+        chestplate = new ItemTrollArmor(this, material, EquipmentSlot.CHEST);
+        leggings = new ItemTrollArmor(this, material, EquipmentSlot.LEGS);
+        boots = new ItemTrollArmor(this, material, EquipmentSlot.FEET);
 
     }
 

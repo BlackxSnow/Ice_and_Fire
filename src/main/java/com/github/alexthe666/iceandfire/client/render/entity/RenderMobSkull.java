@@ -14,19 +14,19 @@ import com.github.alexthe666.iceandfire.client.model.ModelTroll;
 import com.github.alexthe666.iceandfire.entity.EntityMobSkull;
 import com.github.alexthe666.iceandfire.enums.EnumSkullType;
 import com.google.common.collect.Maps;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
-import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EntityRendererManager;
-import net.minecraft.client.renderer.entity.model.SegmentedModel;
-import net.minecraft.client.renderer.model.ModelRenderer;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.model.ListModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.vector.Quaternion;
-import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.resources.ResourceLocation;
+import com.mojang.math.Quaternion;
+import com.mojang.math.Vector3f;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -43,7 +43,7 @@ public class RenderMobSkull extends EntityRenderer<EntityMobSkull> {
     private ModelHydraHead hydraModel;
     private TabulaModel seaSerpentModel;
 
-    public RenderMobSkull(EntityRendererManager renderManager, SegmentedModel seaSerpentModel) {
+    public RenderMobSkull(EntityRenderDispatcher renderManager, ListModel seaSerpentModel) {
         super(renderManager);
         this.hippogryphModel = new ModelHippogryph();
         this.cyclopsModel = new ModelCyclops();
@@ -55,27 +55,27 @@ public class RenderMobSkull extends EntityRenderer<EntityMobSkull> {
         this.hydraModel = new ModelHydraHead(0);
     }
 
-    private static void setRotationAngles(ModelRenderer cube, float rotX, float rotY, float rotZ) {
-        cube.rotateAngleX = rotX;
-        cube.rotateAngleY = rotY;
-        cube.rotateAngleZ = rotZ;
+    private static void setRotationAngles(ModelPart cube, float rotX, float rotY, float rotZ) {
+        cube.xRot = rotX;
+        cube.yRot = rotY;
+        cube.zRot = rotZ;
     }
 
-    public void render(EntityMobSkull entity, float entityYaw, float partialTicks, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn) {
+    public void render(EntityMobSkull entity, float entityYaw, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn, int packedLightIn) {
         super.render(entity, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
-        matrixStackIn.push();
-        matrixStackIn.rotate(new Quaternion(Vector3f.XP, -180, true));
-        matrixStackIn.rotate(new Quaternion(Vector3f.YN, 180 - entity.getYaw(), true));
+        matrixStackIn.pushPose();
+        matrixStackIn.mulPose(new Quaternion(Vector3f.XP, -180, true));
+        matrixStackIn.mulPose(new Quaternion(Vector3f.YN, 180 - entity.getYaw(), true));
         float f = 0.0625F;
         float size = 1.0F;
         matrixStackIn.scale(size, size, size);
         matrixStackIn.translate(0, entity.isOnWall() ? -0.24F : -0.12F, 0.5F);
         renderForEnum(entity.getSkullType(), entity.isOnWall(), matrixStackIn, bufferIn, packedLightIn);
-        matrixStackIn.pop();
+        matrixStackIn.popPose();
     }
 
-    private void renderForEnum(EnumSkullType skull, boolean onWall, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn) {
-        IVertexBuilder ivertexbuilder = bufferIn.getBuffer(RenderType.getEntityTranslucent(getSkullTexture(skull)));
+    private void renderForEnum(EnumSkullType skull, boolean onWall, PoseStack matrixStackIn, MultiBufferSource bufferIn, int packedLightIn) {
+        VertexConsumer ivertexbuilder = bufferIn.getBuffer(RenderType.entityTranslucent(getSkullTexture(skull)));
         switch (skull) {
             case HIPPOGRYPH:
                 matrixStackIn.translate(0, -0.0F, -0.2F);
@@ -147,7 +147,7 @@ public class RenderMobSkull extends EntityRenderer<EntityMobSkull> {
         }
     }
 
-    public ResourceLocation getEntityTexture(EntityMobSkull entity) {
+    public ResourceLocation getTextureLocation(EntityMobSkull entity) {
         return getSkullTexture(entity.getSkullType());
     }
 

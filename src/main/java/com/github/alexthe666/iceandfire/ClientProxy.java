@@ -110,26 +110,32 @@ import com.github.alexthe666.iceandfire.item.ItemDragonHorn;
 import com.github.alexthe666.iceandfire.item.ItemSummoningCrystal;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.RenderTypeLookup;
-import net.minecraft.client.renderer.entity.SpriteRenderer;
-import net.minecraft.client.renderer.tileentity.ItemStackTileEntityRenderer;
-import net.minecraft.client.util.InputMappings;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.item.*;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.common.Mod;
+
+import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.client.renderer.item.ItemPropertyFunction;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(modid = IceAndFire.MODID, value = Dist.CLIENT)
@@ -164,18 +170,18 @@ public class ClientProxy extends CommonProxy {
     public static TabulaModel SEA_SERPENT_BASE_MODEL;
     public static TabulaModel LIGHTNING_DRAGON_BASE_MODEL;
     private static MyrmexHive referedClientHive = null;
-    private FontRenderer bestiaryFontRenderer;
+    private Font bestiaryFontRenderer;
     private int previousViewType = 0;
     private int thirdPersonViewDragon = 0;
     private Entity referencedMob = null;
-    private TileEntity referencedTE = null;
+    private BlockEntity referencedTE = null;
 
     public static MyrmexHive getReferedClientHive() {
         return referedClientHive;
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static Callable<ItemStackTileEntityRenderer> getTEISR() {
+    private static Callable<BlockEntityWithoutLevelRenderer> getTEISR() {
         return IceAndFireTEISR::new;
     }
 
@@ -188,7 +194,7 @@ public class ClientProxy extends CommonProxy {
     @SuppressWarnings("deprecation")
     public void init() {
         IafGuiRegistry.register();
-        this.bestiaryFontRenderer = Minecraft.getInstance().fontRenderer;
+        this.bestiaryFontRenderer = Minecraft.getInstance().font;
         IafKeybindRegistry.init();
         MinecraftForge.EVENT_BUS.register(new PlayerRenderEvents());
         MinecraftForge.EVENT_BUS.register(new ClientEvents());
@@ -230,7 +236,7 @@ public class ClientProxy extends CommonProxy {
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.FIRE_DRAGON_CHARGE, manager -> new RenderDragonFireCharge(manager, true));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.ICE_DRAGON_CHARGE, manager -> new RenderDragonFireCharge(manager, false));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.LIGHTNING_DRAGON_CHARGE, manager -> new RenderDragonLightningCharge());
-        RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.HIPPOGRYPH_EGG, manager -> new SpriteRenderer(manager, Minecraft.getInstance().getItemRenderer()));
+        RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.HIPPOGRYPH_EGG, manager -> new ThrownItemRenderer(manager, Minecraft.getInstance().getItemRenderer()));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.HIPPOGRYPH, manager -> new RenderHippogryph(manager));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.STONE_STATUE, manager -> new RenderStoneStatue(manager));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.GORGON, manager -> new RenderGorgon(manager));
@@ -239,9 +245,9 @@ public class ClientProxy extends CommonProxy {
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.SIREN, manager -> new RenderSiren(manager));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.HIPPOCAMPUS, manager -> new RenderHippocampus(manager));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.DEATH_WORM, manager -> new RenderDeathWorm(manager));
-        RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.DEATH_WORM_EGG, manager -> new SpriteRenderer(manager, Minecraft.getInstance().getItemRenderer()));
+        RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.DEATH_WORM_EGG, manager -> new ThrownItemRenderer(manager, Minecraft.getInstance().getItemRenderer()));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.COCKATRICE, manager -> new RenderCockatrice(manager));
-        RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.COCKATRICE_EGG, manager -> new SpriteRenderer(manager, Minecraft.getInstance().getItemRenderer()));
+        RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.COCKATRICE_EGG, manager -> new ThrownItemRenderer(manager, Minecraft.getInstance().getItemRenderer()));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.STYMPHALIAN_BIRD, manager -> new RenderStymphalianBird(manager));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.STYMPHALIAN_FEATHER, manager -> new RenderStymphalianFeather(manager));
         RenderingRegistry.registerEntityRenderingHandler(IafEntityRegistry.STYMPHALIAN_ARROW, manager -> new RenderStymphalianArrow(manager));
@@ -288,75 +294,75 @@ public class ClientProxy extends CommonProxy {
         ClientRegistry.bindTileEntityRenderer(IafTileEntityRegistry.DREAD_PORTAL, manager -> new RenderDreadPortal(manager));
         ClientRegistry.bindTileEntityRenderer(IafTileEntityRegistry.DREAD_SPAWNER, manager -> new RenderDreadSpawner(manager));
         ClientRegistry.bindTileEntityRenderer(IafTileEntityRegistry.GHOST_CHEST, manager -> new RenderGhostChest(manager));
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.GOLD_PILE, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.SILVER_PILE, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.LECTERN, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PODIUM_OAK, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PODIUM_BIRCH, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PODIUM_SPRUCE, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PODIUM_JUNGLE, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PODIUM_ACACIA, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PODIUM_DARK_OAK, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.FIRE_LILY, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.FROST_LILY, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.LIGHTNING_LILY, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.DRAGON_ICE_SPIKES, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.MYRMEX_DESERT_RESIN_BLOCK, RenderType.getTranslucent());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.MYRMEX_DESERT_RESIN_GLASS, RenderType.getTranslucent());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.MYRMEX_JUNGLE_RESIN_BLOCK, RenderType.getTranslucent());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.MYRMEX_JUNGLE_RESIN_GLASS, RenderType.getTranslucent());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.MYRMEX_DESERT_BIOLIGHT, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.MYRMEX_JUNGLE_BIOLIGHT, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.DREAD_STONE_FACE, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.DREAD_TORCH, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.BURNT_TORCH, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.EGG_IN_ICE, RenderType.getTranslucent());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.JAR_EMPTY, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.JAR_PIXIE_0, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.JAR_PIXIE_1, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.JAR_PIXIE_2, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.JAR_PIXIE_3, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.JAR_PIXIE_4, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_MUSHROOM_BROWN, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_MUSHROOM_RED, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_OAK, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_BIRCH, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_SPRUCE, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_DARK_OAK, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.DREAD_SPAWNER, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.DREAD_TORCH_WALL, RenderType.getCutout());
-        RenderTypeLookup.setRenderLayer(IafBlockRegistry.BURNT_TORCH_WALL, RenderType.getCutout());
-        IItemPropertyGetter pulling = ItemModelsProperties.func_239417_a_(Items.BOW, new ResourceLocation("pulling"));
-        IItemPropertyGetter pull = (stack, worldIn, entity) -> {
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.GOLD_PILE, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.SILVER_PILE, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.LECTERN, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PODIUM_OAK, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PODIUM_BIRCH, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PODIUM_SPRUCE, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PODIUM_JUNGLE, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PODIUM_ACACIA, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PODIUM_DARK_OAK, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.FIRE_LILY, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.FROST_LILY, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.LIGHTNING_LILY, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.DRAGON_ICE_SPIKES, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.MYRMEX_DESERT_RESIN_BLOCK, RenderType.translucent());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.MYRMEX_DESERT_RESIN_GLASS, RenderType.translucent());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.MYRMEX_JUNGLE_RESIN_BLOCK, RenderType.translucent());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.MYRMEX_JUNGLE_RESIN_GLASS, RenderType.translucent());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.MYRMEX_DESERT_BIOLIGHT, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.MYRMEX_JUNGLE_BIOLIGHT, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.DREAD_STONE_FACE, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.DREAD_TORCH, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.BURNT_TORCH, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.EGG_IN_ICE, RenderType.translucent());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.JAR_EMPTY, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.JAR_PIXIE_0, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.JAR_PIXIE_1, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.JAR_PIXIE_2, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.JAR_PIXIE_3, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.JAR_PIXIE_4, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_MUSHROOM_BROWN, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_MUSHROOM_RED, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_OAK, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_BIRCH, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_SPRUCE, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.PIXIE_HOUSE_DARK_OAK, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.DREAD_SPAWNER, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.DREAD_TORCH_WALL, RenderType.cutout());
+        ItemBlockRenderTypes.setRenderLayer(IafBlockRegistry.BURNT_TORCH_WALL, RenderType.cutout());
+        ItemPropertyFunction pulling = ItemProperties.getProperty(Items.BOW, new ResourceLocation("pulling"));
+        ItemPropertyFunction pull = (stack, worldIn, entity) -> {
             if (entity == null) {
                 return 0.0F;
             } else {
                 ItemDragonBow item = ((ItemDragonBow) stack.getItem());
-                return entity.getActiveItemStack() != stack ? 0.0F : (stack.getUseDuration() - entity.getItemInUseCount()) / 20.0F;
+                return entity.getUseItem() != stack ? 0.0F : (stack.getUseDuration() - entity.getUseItemRemainingTicks()) / 20.0F;
             }
         };
-        ItemModelsProperties.registerProperty(IafItemRegistry.DRAGON_BOW.asItem(), new ResourceLocation("pulling"), pulling);
-        ItemModelsProperties.registerProperty(IafItemRegistry.DRAGON_BOW.asItem(), new ResourceLocation("pull"), pull);
-        ItemModelsProperties.registerProperty(IafItemRegistry.DRAGON_HORN, new ResourceLocation("iceorfire"), (p_239428_0_, p_239428_1_, p_239428_2_) -> {
+        ItemProperties.register(IafItemRegistry.DRAGON_BOW.asItem(), new ResourceLocation("pulling"), pulling);
+        ItemProperties.register(IafItemRegistry.DRAGON_BOW.asItem(), new ResourceLocation("pull"), pull);
+        ItemProperties.register(IafItemRegistry.DRAGON_HORN, new ResourceLocation("iceorfire"), (p_239428_0_, p_239428_1_, p_239428_2_) -> {
             return ItemDragonHorn.getDragonType(p_239428_0_) * 0.25F;
         });
-        ItemModelsProperties.registerProperty(IafItemRegistry.SUMMONING_CRYSTAL_FIRE, new ResourceLocation("has_dragon"), (stack, p_239428_1_, p_239428_2_) -> {
+        ItemProperties.register(IafItemRegistry.SUMMONING_CRYSTAL_FIRE, new ResourceLocation("has_dragon"), (stack, p_239428_1_, p_239428_2_) -> {
             return ItemSummoningCrystal.hasDragon(stack) ? 1.0F : 0.0F;
         });
-        ItemModelsProperties.registerProperty(IafItemRegistry.SUMMONING_CRYSTAL_ICE, new ResourceLocation("has_dragon"), (stack, p_239428_1_, p_239428_2_) -> {
+        ItemProperties.register(IafItemRegistry.SUMMONING_CRYSTAL_ICE, new ResourceLocation("has_dragon"), (stack, p_239428_1_, p_239428_2_) -> {
             return ItemSummoningCrystal.hasDragon(stack) ? 1.0F : 0.0F;
         });
-        ItemModelsProperties.registerProperty(IafItemRegistry.SUMMONING_CRYSTAL_LIGHTNING, new ResourceLocation("has_dragon"), (stack, p_239428_1_, p_239428_2_) -> {
+        ItemProperties.register(IafItemRegistry.SUMMONING_CRYSTAL_LIGHTNING, new ResourceLocation("has_dragon"), (stack, p_239428_1_, p_239428_2_) -> {
             return ItemSummoningCrystal.hasDragon(stack) ? 1.0F : 0.0F;
         });
-        ItemModelsProperties.registerProperty(IafItemRegistry.TIDE_TRIDENT, new ResourceLocation("throwing"), (p_239419_0_, p_239419_1_, p_239419_2_) -> {
-            return p_239419_2_ != null && p_239419_2_.isHandActive() && p_239419_2_.getActiveItemStack() == p_239419_0_ ? 1.0F : 0.0F;
+        ItemProperties.register(IafItemRegistry.TIDE_TRIDENT, new ResourceLocation("throwing"), (p_239419_0_, p_239419_1_, p_239419_2_) -> {
+            return p_239419_2_ != null && p_239419_2_.isUsingItem() && p_239419_2_.getUseItem() == p_239419_0_ ? 1.0F : 0.0F;
         });
     }
 
     @OnlyIn(Dist.CLIENT)
     public void spawnDragonParticle(String name, double x, double y, double z, double motX, double motY, double motZ, EntityDragonBase entityDragonBase) {
-        ClientWorld world = Minecraft.getInstance().world;
+        ClientLevel world = Minecraft.getInstance().level;
         if (world == null) {
             return;
         }
@@ -368,13 +374,13 @@ public class ClientProxy extends CommonProxy {
             particle = new ParticleDragonFrost(world, x, y, z, motX, motY, motZ, entityDragonBase, 0);
         }
         if (particle != null) {
-            Minecraft.getInstance().particles.addEffect(particle);
+            Minecraft.getInstance().particleEngine.add(particle);
         }
     }
 
     @OnlyIn(Dist.CLIENT)
     public void spawnParticle(String name, double x, double y, double z, double motX, double motY, double motZ, float size) {
-        ClientWorld world = Minecraft.getInstance().world;
+        ClientLevel world = Minecraft.getInstance().level;
         if (world == null) {
             return;
         }
@@ -413,26 +419,26 @@ public class ClientProxy extends CommonProxy {
             particle = new ParticleHydraBreath(world, x, y, z, (float) motX, (float) motY, (float) motZ);
         }
         if (particle != null) {
-            Minecraft.getInstance().particles.addEffect(particle);
+            Minecraft.getInstance().particleEngine.add(particle);
         }
     }
 
     @OnlyIn(Dist.CLIENT)
     @Override
     public void openBestiaryGui(ItemStack book) {
-        Minecraft.getInstance().displayGuiScreen(new GuiBestiary(book));
+        Minecraft.getInstance().setScreen(new GuiBestiary(book));
     }
 
     @OnlyIn(Dist.CLIENT)
     @Override
     public void openMyrmexStaffGui(ItemStack staff) {
-        Minecraft.getInstance().displayGuiScreen(new GuiMyrmexStaff(staff));
+        Minecraft.getInstance().setScreen(new GuiMyrmexStaff(staff));
     }
 
     @OnlyIn(Dist.CLIENT)
     @Override
     public void openMyrmexAddRoomGui(ItemStack staff, BlockPos pos, Direction facing) {
-        Minecraft.getInstance().displayGuiScreen(new GuiMyrmexAddRoom(staff, pos, facing));
+        Minecraft.getInstance().setScreen(new GuiMyrmexAddRoom(staff, pos, facing));
     }
 
     @OnlyIn(Dist.CLIENT)
@@ -487,7 +493,7 @@ public class ClientProxy extends CommonProxy {
     }
 
     public Object getFontRenderer() {
-        return Minecraft.getInstance().fontRenderer;
+        return Minecraft.getInstance().font;
     }
 
     public int getDragon3rdPersonView() {
@@ -515,7 +521,7 @@ public class ClientProxy extends CommonProxy {
     }
 
     public boolean shouldSeeBestiaryContents() {
-        return InputMappings.isKeyDown(Minecraft.getInstance().getMainWindow().getHandle(), 340) || InputMappings.isKeyDown(Minecraft.getInstance().getMainWindow().getHandle(), 344);
+        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), 340) || InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), 344);
     }
 
     public Entity getReferencedMob() {
@@ -526,11 +532,11 @@ public class ClientProxy extends CommonProxy {
         referencedMob = dragonBase;
     }
 
-    public TileEntity getRefrencedTE() {
+    public BlockEntity getRefrencedTE() {
         return referencedTE;
     }
 
-    public void setRefrencedTE(TileEntity tileEntity) {
+    public void setRefrencedTE(BlockEntity tileEntity) {
         referencedTE = tileEntity;
     }
 
@@ -538,7 +544,7 @@ public class ClientProxy extends CommonProxy {
         return group.setISTER(ClientProxy::getTEISR);
     }
 
-    public PlayerEntity getClientSidePlayer() {
+    public Player getClientSidePlayer() {
         return Minecraft.getInstance().player;
     }
 }

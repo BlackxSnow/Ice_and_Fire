@@ -4,8 +4,8 @@ import javax.annotation.Nonnull;
 
 import com.github.alexthe666.iceandfire.item.IafItemRegistry;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Direction;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.Direction;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;

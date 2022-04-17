@@ -2,25 +2,25 @@ package com.github.alexthe666.iceandfire.entity.tile;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.ItemStackHelper;
-import net.minecraft.inventory.container.ChestContainer;
-import net.minecraft.inventory.container.Container;
-import net.minecraft.inventory.container.ContainerType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.server.SUpdateTileEntityPacket;
-import net.minecraft.tileentity.LockableLootTileEntity;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
+import net.minecraft.core.NonNullList;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 
-public class TileEntityMyrmexCocoon extends LockableLootTileEntity {
+public class TileEntityMyrmexCocoon extends RandomizableContainerBlockEntity {
 
 
     private NonNullList<ItemStack> chestContents = NonNullList.withSize(18, ItemStack.EMPTY);
@@ -29,7 +29,7 @@ public class TileEntityMyrmexCocoon extends LockableLootTileEntity {
         super(IafTileEntityRegistry.MYRMEX_COCOON);
     }
 
-    public int getSizeInventory() {
+    public int getContainerSize() {
         return 18;
     }
 
@@ -43,42 +43,42 @@ public class TileEntityMyrmexCocoon extends LockableLootTileEntity {
     }
 
 
-    public void read(BlockState bs, CompoundNBT compound) {
-        super.read(bs, compound);
-        this.chestContents = NonNullList.withSize(this.getSizeInventory(), ItemStack.EMPTY);
+    public void load(BlockState bs, CompoundTag compound) {
+        super.load(bs, compound);
+        this.chestContents = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
 
-        if (!this.checkLootAndRead(compound)) {
-            ItemStackHelper.loadAllItems(compound, this.chestContents);
+        if (!this.tryLoadLootTable(compound)) {
+            ContainerHelper.loadAllItems(compound, this.chestContents);
         }
     }
 
-    public CompoundNBT write(CompoundNBT compound) {
-        super.write(compound);
-        if (!this.checkLootAndWrite(compound)) {
-            ItemStackHelper.saveAllItems(compound, this.chestContents);
+    public CompoundTag save(CompoundTag compound) {
+        super.save(compound);
+        if (!this.trySaveLootTable(compound)) {
+            ContainerHelper.saveAllItems(compound, this.chestContents);
         }
 
         return compound;
     }
 
     @Override
-    protected ITextComponent getDefaultName() {
-        return new TranslationTextComponent("container.myrmex_cocoon");
+    protected Component getDefaultName() {
+        return new TranslatableComponent("container.myrmex_cocoon");
     }
 
     @Override
-    protected Container createMenu(int id, PlayerInventory player) {
-        return new ChestContainer(ContainerType.GENERIC_9X2, id, player, this, 2);
+    protected AbstractContainerMenu createMenu(int id, Inventory player) {
+        return new ChestMenu(MenuType.GENERIC_9x2, id, player, this, 2);
     }
 
     @Nullable
     @Override
-    public Container createMenu(int id, PlayerInventory playerInventory, PlayerEntity player) {
-        return new ChestContainer(ContainerType.GENERIC_9X2, id, playerInventory, this, 2);
+    public AbstractContainerMenu createMenu(int id, Inventory playerInventory, Player player) {
+        return new ChestMenu(MenuType.GENERIC_9x2, id, playerInventory, this, 2);
     }
 
 
-    public int getInventoryStackLimit() {
+    public int getMaxStackSize() {
         return 64;
     }
 
@@ -92,33 +92,33 @@ public class TileEntityMyrmexCocoon extends LockableLootTileEntity {
 
     }
 
-    public void openInventory(PlayerEntity player) {
-        this.fillWithLoot(null);
-        player.world.playSound(this.pos.getX(), this.pos.getY(), this.pos.getZ(), SoundEvents.ENTITY_SLIME_JUMP, SoundCategory.BLOCKS, 1, 1, false);
+    public void startOpen(Player player) {
+        this.unpackLootTable(null);
+        player.level.playLocalSound(this.worldPosition.getX(), this.worldPosition.getY(), this.worldPosition.getZ(), SoundEvents.SLIME_JUMP, SoundSource.BLOCKS, 1, 1, false);
     }
 
-    public void closeInventory(PlayerEntity player) {
-        this.fillWithLoot(null);
-        player.world.playSound(this.pos.getX(), this.pos.getY(), this.pos.getZ(), SoundEvents.ENTITY_SLIME_SQUISH, SoundCategory.BLOCKS, 1, 1, false);
-    }
-
-    @Override
-    public SUpdateTileEntityPacket getUpdatePacket() {
-        return new SUpdateTileEntityPacket(pos, 1, getUpdateTag());
+    public void stopOpen(Player player) {
+        this.unpackLootTable(null);
+        player.level.playLocalSound(this.worldPosition.getX(), this.worldPosition.getY(), this.worldPosition.getZ(), SoundEvents.SLIME_SQUISH, SoundSource.BLOCKS, 1, 1, false);
     }
 
     @Override
-    public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket packet) {
-        read(this.getBlockState(), packet.getNbtCompound());
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return new ClientboundBlockEntityDataPacket(worldPosition, 1, getUpdateTag());
     }
 
-    public CompoundNBT getUpdateTag() {
-        return this.write(new CompoundNBT());
+    @Override
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
+        load(this.getBlockState(), packet.getTag());
+    }
+
+    public CompoundTag getUpdateTag() {
+        return this.save(new CompoundTag());
     }
 
     public boolean isFull(ItemStack heldStack) {
         for (ItemStack itemstack : chestContents) {
-            if (itemstack.isEmpty() || heldStack != null && !heldStack.isEmpty() && itemstack.isItemEqual(heldStack) && itemstack.getCount() + heldStack.getCount() < itemstack.getMaxStackSize()) {
+            if (itemstack.isEmpty() || heldStack != null && !heldStack.isEmpty() && itemstack.sameItem(heldStack) && itemstack.getCount() + heldStack.getCount() < itemstack.getMaxStackSize()) {
                 return false;
             }
         }

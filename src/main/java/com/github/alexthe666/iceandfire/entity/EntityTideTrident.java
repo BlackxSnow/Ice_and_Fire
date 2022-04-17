@@ -2,24 +2,24 @@ package com.github.alexthe666.iceandfire.entity;
 
 import com.github.alexthe666.iceandfire.item.IafItemRegistry;
 
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.LightningBoltEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.entity.projectile.TridentEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.IPacket;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.EntityRayTraceResult;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.projectile.ThrownTrident;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.network.FMLPlayMessages;
@@ -27,52 +27,52 @@ import net.minecraftforge.fml.network.NetworkHooks;
 
 import java.lang.reflect.Field;
 
-public class EntityTideTrident extends TridentEntity {
+public class EntityTideTrident extends ThrownTrident {
 
 
-    public EntityTideTrident(EntityType type, World worldIn) {
+    public EntityTideTrident(EntityType type, Level worldIn) {
         super(type, worldIn);
-        thrownStack = new ItemStack(IafItemRegistry.TIDE_TRIDENT);
+        tridentItem = new ItemStack(IafItemRegistry.TIDE_TRIDENT);
     }
 
-    public EntityTideTrident(World worldIn, LivingEntity thrower, ItemStack thrownStackIn) {
+    public EntityTideTrident(Level worldIn, LivingEntity thrower, ItemStack thrownStackIn) {
         this(IafEntityRegistry.TIDE_TRIDENT, worldIn);
-        this.setPosition(thrower.getPosX(), thrower.getPosYEye() - (double)0.1F, thrower.getPosZ());
-        this.setShooter(thrower);
-        thrownStack = thrownStackIn;
-        this.dataManager.set(LOYALTY_LEVEL, (byte)EnchantmentHelper.getLoyaltyModifier(thrownStackIn));
-        this.dataManager.set(field_226571_aq_, thrownStackIn.hasEffect());
+        this.setPos(thrower.getX(), thrower.getEyeY() - (double)0.1F, thrower.getZ());
+        this.setOwner(thrower);
+        tridentItem = thrownStackIn;
+        this.entityData.set(ID_LOYALTY, (byte)EnchantmentHelper.getLoyalty(thrownStackIn));
+        this.entityData.set(ID_FOIL, thrownStackIn.hasFoil());
     }
 
-    public EntityTideTrident(FMLPlayMessages.SpawnEntity spawnEntity, World worldIn) {
+    public EntityTideTrident(FMLPlayMessages.SpawnEntity spawnEntity, Level worldIn) {
         this(IafEntityRegistry.TIDE_TRIDENT, worldIn);
     }
 
-    public EntityTideTrident(World worldIn, double x, double y, double z) {
+    public EntityTideTrident(Level worldIn, double x, double y, double z) {
         super(worldIn, x, y, z);
-        thrownStack = new ItemStack(IafItemRegistry.TIDE_TRIDENT);
+        tridentItem = new ItemStack(IafItemRegistry.TIDE_TRIDENT);
     }
 
     @Override
-    public IPacket<?> createSpawnPacket() {
+    public Packet<?> getAddEntityPacket() {
         return NetworkHooks.getEntitySpawningPacket(this);
     }
 
 
     @Override
-    protected void onEntityHit(EntityRayTraceResult result) {
+    protected void onHitEntity(EntityHitResult result) {
         Entity entity = result.getEntity();
         float f = 12.0F;
         if (entity instanceof LivingEntity) {
             LivingEntity livingentity = (LivingEntity) entity;
-            f += EnchantmentHelper.getModifierForCreature(this.thrownStack, livingentity.getCreatureAttribute());
+            f += EnchantmentHelper.getDamageBonus(this.tridentItem, livingentity.getMobType());
         }
 
-        Entity entity1 = this.getShooter();
-        DamageSource damagesource = DamageSource.causeTridentDamage(this, entity1 == null ? this : entity1);
+        Entity entity1 = this.getOwner();
+        DamageSource damagesource = DamageSource.trident(this, entity1 == null ? this : entity1);
         this.dealtDamage = true;
-        SoundEvent soundevent = SoundEvents.ITEM_TRIDENT_HIT;
-        if (entity.attackEntityFrom(damagesource, f)) {
+        SoundEvent soundevent = SoundEvents.TRIDENT_HIT;
+        if (entity.hurt(damagesource, f)) {
             if (entity.getType() == EntityType.ENDERMAN) {
                 return;
             }
@@ -80,24 +80,24 @@ public class EntityTideTrident extends TridentEntity {
             if (entity instanceof LivingEntity) {
                 LivingEntity livingentity1 = (LivingEntity) entity;
                 if (entity1 instanceof LivingEntity) {
-                    EnchantmentHelper.applyThornEnchantments(livingentity1, entity1);
-                    EnchantmentHelper.applyArthropodEnchantments((LivingEntity) entity1, livingentity1);
+                    EnchantmentHelper.doPostHurtEffects(livingentity1, entity1);
+                    EnchantmentHelper.doPostDamageEffects((LivingEntity) entity1, livingentity1);
                 }
 
-                this.arrowHit(livingentity1);
+                this.doPostHurtEffects(livingentity1);
             }
         }
 
-        this.setMotion(this.getMotion().mul(-0.01D, -0.1D, -0.01D));
+        this.setDeltaMovement(this.getDeltaMovement().multiply(-0.01D, -0.1D, -0.01D));
         float f1 = 1.0F;
-        if (this.world instanceof ServerWorld && this.world.isThundering() && EnchantmentHelper.hasChanneling(this.thrownStack)) {
-            BlockPos blockpos = entity.getPosition();
-            if (this.world.canSeeSky(blockpos)) {
-                LightningBoltEntity lightningboltentity = EntityType.LIGHTNING_BOLT.create(this.world);
-                lightningboltentity.moveForced(Vector3d.copyCentered(blockpos));
-                lightningboltentity.setCaster(entity1 instanceof ServerPlayerEntity ? (ServerPlayerEntity)entity1 : null);
-                this.world.addEntity(lightningboltentity);
-                soundevent = SoundEvents.ITEM_TRIDENT_THUNDER;
+        if (this.level instanceof ServerLevel && this.level.isThundering() && EnchantmentHelper.hasChanneling(this.tridentItem)) {
+            BlockPos blockpos = entity.blockPosition();
+            if (this.level.canSeeSky(blockpos)) {
+                LightningBolt lightningboltentity = EntityType.LIGHTNING_BOLT.create(this.level);
+                lightningboltentity.moveTo(Vec3.atCenterOf(blockpos));
+                lightningboltentity.setCause(entity1 instanceof ServerPlayer ? (ServerPlayer)entity1 : null);
+                this.level.addFreshEntity(lightningboltentity);
+                soundevent = SoundEvents.TRIDENT_THUNDER;
                 f1 = 5.0F;
             }
         }
@@ -105,8 +105,8 @@ public class EntityTideTrident extends TridentEntity {
         this.playSound(soundevent, f1, 1.0F);
     }
 
-    protected ItemStack getArrowStack() {
-        return this.thrownStack.getItem() == Items.TRIDENT ? new ItemStack(IafItemRegistry.TIDE_TRIDENT) : this.thrownStack.copy();
+    protected ItemStack getPickupItem() {
+        return this.tridentItem.getItem() == Items.TRIDENT ? new ItemStack(IafItemRegistry.TIDE_TRIDENT) : this.tridentItem.copy();
     }
 
 }

@@ -8,23 +8,23 @@ import com.github.alexthe666.iceandfire.entity.EntityDragonBase;
 import com.github.alexthe666.iceandfire.entity.EntityIceDragon;
 import com.github.alexthe666.iceandfire.entity.EntityLightningDragon;
 import com.github.alexthe666.iceandfire.enums.EnumDragonTextures;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
-import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.client.renderer.entity.layers.LayerRenderer;
-import net.minecraft.client.renderer.entity.model.SegmentedModel;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.model.ListModel;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.*;
 
 @OnlyIn(Dist.CLIENT)
-public class LayerDragonEyes extends LayerRenderer<EntityDragonBase, SegmentedModel<EntityDragonBase>> {
+public class LayerDragonEyes extends RenderLayer<EntityDragonBase, ListModel<EntityDragonBase>> {
     private final MobRenderer render;
     private TabulaModel fireHead;
     private TabulaModel iceHead;
@@ -46,31 +46,31 @@ public class LayerDragonEyes extends LayerRenderer<EntityDragonBase, SegmentedMo
     }
 
     @Override
-    public void render(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn, EntityDragonBase dragon, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void render(PoseStack matrixStackIn, MultiBufferSource bufferIn, int packedLightIn, EntityDragonBase dragon, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
         if (dragon.shouldRenderEyes()) {
-            RenderType eyes = RenderType.getEyes(EnumDragonTextures.getEyeTextureFromDragon(dragon));
-            IVertexBuilder ivertexbuilder = bufferIn.getBuffer(eyes);
+            RenderType eyes = RenderType.eyes(EnumDragonTextures.getEyeTextureFromDragon(dragon));
+            VertexConsumer ivertexbuilder = bufferIn.getBuffer(eyes);
             if (dragon instanceof EntityLightningDragon && lightningHead !=null){
-                copyPositions(lightningHead,(TabulaModel)this.getEntityModel());
-                lightningHead.render(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+                copyPositions(lightningHead,(TabulaModel)this.getParentModel());
+                lightningHead.renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
             }
             else if(dragon instanceof EntityIceDragon && iceHead != null){
-                copyPositions(iceHead,(TabulaModel)this.getEntityModel());
-                iceHead.render(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+                copyPositions(iceHead,(TabulaModel)this.getParentModel());
+                iceHead.renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
             }
             else if(fireHead != null){
-                copyPositions(fireHead,(TabulaModel)this.getEntityModel());
-                fireHead.render(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+                copyPositions(fireHead,(TabulaModel)this.getParentModel());
+                fireHead.renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
             }
             //Fallback method
             else {
-                this.getEntityModel().render(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+                this.getParentModel().renderToBuffer(matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
             }
         }
     }
 
     @Override
-    protected ResourceLocation getEntityTexture(EntityDragonBase entityIn) {
+    protected ResourceLocation getTextureLocation(EntityDragonBase entityIn) {
         return null;
     }
 
@@ -108,24 +108,24 @@ public class LayerDragonEyes extends LayerRenderer<EntityDragonBase, SegmentedMo
     }
 
     public boolean isAngleEqual(AdvancedModelBox original, AdvancedModelBox pose) {
-        return pose != null && pose.rotateAngleX == original.rotateAngleX && pose.rotateAngleY == original.rotateAngleY && pose.rotateAngleZ == original.rotateAngleZ;
+        return pose != null && pose.xRot == original.xRot && pose.yRot == original.yRot && pose.zRot == original.zRot;
     }
     public boolean isPositionEqual(AdvancedModelBox original, AdvancedModelBox pose) {
-        return pose.rotationPointX == original.rotationPointX && pose.rotationPointY == original.rotationPointY && pose.rotationPointZ == original.rotationPointZ;
+        return pose.x == original.x && pose.y == original.y && pose.z == original.z;
     }
 
     public void copyPositions(TabulaModel model, TabulaModel modelTo) {
         for (AdvancedModelBox cube : model.getCubes().values()) {
             AdvancedModelBox modelToCube = modelTo.getCube(cube.boxName);
             if (!isAngleEqual(cube,modelToCube)) {
-                cube.rotateAngleX = modelToCube.rotateAngleX;
-                cube.rotateAngleY = modelToCube.rotateAngleY;
-                cube.rotateAngleZ = modelToCube.rotateAngleZ;
+                cube.xRot = modelToCube.xRot;
+                cube.yRot = modelToCube.yRot;
+                cube.zRot = modelToCube.zRot;
             }
             if (!isPositionEqual(cube,modelToCube)) {
-                cube.rotationPointX = modelToCube.rotationPointX;
-                cube.rotationPointY = modelToCube.rotationPointY;
-                cube.rotationPointZ= modelToCube.rotationPointZ;
+                cube.x = modelToCube.x;
+                cube.y = modelToCube.y;
+                cube.z= modelToCube.z;
             }
 
         }

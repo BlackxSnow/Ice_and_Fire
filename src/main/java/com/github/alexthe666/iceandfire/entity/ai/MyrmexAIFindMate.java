@@ -13,11 +13,11 @@ import com.github.alexthe666.iceandfire.entity.util.MyrmexHive;
 import com.github.alexthe666.iceandfire.world.MyrmexWorldData;
 import com.google.common.base.Predicate;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.goal.TargetGoal;
-import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.goal.target.TargetGoal;
+import net.minecraft.world.phys.AABB;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class MyrmexAIFindMate<T extends EntityMyrmexBase> extends TargetGoal {
     protected final DragonAITargetItems.Sorter theNearestAttackableTargetSorter;
@@ -35,33 +35,33 @@ public class MyrmexAIFindMate<T extends EntityMyrmexBase> extends TargetGoal {
             }
         };
         this.myrmex = myrmex;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
     @Override
-    public boolean shouldExecute() {
+    public boolean canUse() {
         if (!this.myrmex.shouldHaveNormalAI()) {
             return false;
         }
-        if (!this.myrmex.canMove() || this.myrmex.getAttackTarget() != null || this.myrmex.releaseTicks < 400 || this.myrmex.mate != null) {
+        if (!this.myrmex.canMove() || this.myrmex.getTarget() != null || this.myrmex.releaseTicks < 400 || this.myrmex.mate != null) {
             return false;
         }
         MyrmexHive village = this.myrmex.getHive();
         if (village == null) {
-            village = MyrmexWorldData.get(this.myrmex.world).getNearestHive(this.myrmex.getPosition(), 100);
+            village = MyrmexWorldData.get(this.myrmex.level).getNearestHive(this.myrmex.blockPosition(), 100);
         }
-        if (village != null && village.getCenter().distanceSq(this.myrmex.getPosX(), village.getCenter().getY(), this.myrmex.getPosZ(), true) < 2000) {
+        if (village != null && village.getCenter().distSqr(this.myrmex.getX(), village.getCenter().getY(), this.myrmex.getZ(), true) < 2000) {
             return false;
         }
-        List<Entity> list = this.goalOwner.world.getEntitiesInAABBexcluding(myrmex, this.getTargetableArea(100), this.targetEntitySelector);
+        List<Entity> list = this.mob.level.getEntities(myrmex, this.getTargetableArea(100), this.targetEntitySelector);
         if (list.isEmpty()) {
             return false;
         } else {
             Collections.sort(list, this.theNearestAttackableTargetSorter);
             for (Entity royal : list) {
-                if (this.myrmex.canMateWith((EntityMyrmexRoyal) royal)) {
+                if (this.myrmex.canMate((EntityMyrmexRoyal) royal)) {
                     this.myrmex.mate = (EntityMyrmexRoyal) royal;
-                    this.myrmex.world.setEntityState(this.myrmex, (byte) 76);
+                    this.myrmex.level.broadcastEntityEvent(this.myrmex, (byte) 76);
                     return true;
                 }
             }
@@ -69,12 +69,12 @@ public class MyrmexAIFindMate<T extends EntityMyrmexBase> extends TargetGoal {
         }
     }
 
-    protected AxisAlignedBB getTargetableArea(double targetDistance) {
-        return this.goalOwner.getBoundingBox().grow(targetDistance, targetDistance/2, targetDistance);
+    protected AABB getTargetableArea(double targetDistance) {
+        return this.mob.getBoundingBox().inflate(targetDistance, targetDistance/2, targetDistance);
     }
 
     @Override
-    public boolean shouldContinueExecuting() {
+    public boolean canContinueToUse() {
         return false;
     }
 
@@ -86,8 +86,8 @@ public class MyrmexAIFindMate<T extends EntityMyrmexBase> extends TargetGoal {
         }
 
         public int compare(Entity p_compare_1_, Entity p_compare_2_) {
-            double d0 = this.theEntity.getDistanceSq(p_compare_1_);
-            double d1 = this.theEntity.getDistanceSq(p_compare_2_);
+            double d0 = this.theEntity.distanceToSqr(p_compare_1_);
+            double d1 = this.theEntity.distanceToSqr(p_compare_2_);
             return d0 < d1 ? -1 : (d0 > d1 ? 1 : 0);
         }
     }

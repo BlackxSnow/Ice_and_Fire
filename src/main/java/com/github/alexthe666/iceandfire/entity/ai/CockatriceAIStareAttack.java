@@ -6,12 +6,12 @@ import com.github.alexthe666.iceandfire.entity.EntityCockatrice;
 import com.github.alexthe666.iceandfire.entity.EntityGorgon;
 import com.github.alexthe666.iceandfire.entity.util.DragonUtils;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.entity.ai.goal.Goal.Flag;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 
 public class CockatriceAIStareAttack extends Goal {
     private final EntityCockatrice entity;
@@ -32,15 +32,15 @@ public class CockatriceAIStareAttack extends Goal {
         this.moveSpeedAmp = speedAmplifier;
         this.attackCooldown = delay;
         this.maxAttackDistance = maxDistance * maxDistance;
-        this.setMutexFlags(EnumSet.of(Flag.MOVE));
+        this.setFlags(EnumSet.of(Flag.MOVE));
     }
 
     public static boolean isEntityLookingAt(LivingEntity looker, LivingEntity seen, double degree) {
-        Vector3d Vector3d = looker.getLook(1.0F).normalize();
-        Vector3d Vector3d1 = new Vector3d(seen.getPosX() - looker.getPosX(), seen.getBoundingBox().minY + (double) seen.getEyeHeight() - (looker.getPosY() + (double) looker.getEyeHeight()), seen.getPosZ() - looker.getPosZ());
+        Vec3 Vector3d = looker.getViewVector(1.0F).normalize();
+        Vec3 Vector3d1 = new Vec3(seen.getX() - looker.getX(), seen.getBoundingBox().minY + (double) seen.getEyeHeight() - (looker.getY() + (double) looker.getEyeHeight()), seen.getZ() - looker.getZ());
         double d0 = Vector3d1.length();
         Vector3d1 = Vector3d1.normalize();
-        double d1 = Vector3d.dotProduct(Vector3d1);
+        double d1 = Vector3d.dot(Vector3d1);
         return d1 > 1.0D - degree / d0 && !looker.isSpectator();
     }
 
@@ -48,45 +48,45 @@ public class CockatriceAIStareAttack extends Goal {
         this.attackCooldown = cooldown;
     }
 
-    public boolean shouldExecute() {
-        return this.entity.getAttackTarget() != null;
+    public boolean canUse() {
+        return this.entity.getTarget() != null;
     }
 
-    public boolean shouldContinueExecuting() {
-        return this.shouldExecute();
+    public boolean canContinueToUse() {
+        return this.canUse();
     }
 
-    public void resetTask() {
-        super.resetTask();
+    public void stop() {
+        super.stop();
         this.seeTime = 0;
         this.attackTime = -1;
-        this.entity.resetActiveHand();
-        this.entity.getNavigator().clearPath();
+        this.entity.stopUsingItem();
+        this.entity.getNavigation().stop();
         target = null;
     }
 
     public void tick() {
-        LivingEntity LivingEntity = this.entity.getAttackTarget();
+        LivingEntity LivingEntity = this.entity.getTarget();
         if (LivingEntity != null) {
 
             if (EntityGorgon.isStoneMob(LivingEntity) || !LivingEntity.isAlive()) {
-                entity.setAttackTarget(null);
+                entity.setTarget(null);
                 this.entity.setTargetedEntity(0);
-                resetTask();
+                stop();
                 return;
             }
-            if (!isEntityLookingAt(LivingEntity, entity, EntityCockatrice.VIEW_RADIUS) || (LivingEntity.prevPosX != entity.getPosX() || LivingEntity.prevPosY != entity.getPosY() || LivingEntity.prevPosZ != entity.getPosZ())) {
-                this.entity.getNavigator().clearPath();
-                this.prevYaw = LivingEntity.rotationYaw;
+            if (!isEntityLookingAt(LivingEntity, entity, EntityCockatrice.VIEW_RADIUS) || (LivingEntity.xo != entity.getX() || LivingEntity.yo != entity.getY() || LivingEntity.zo != entity.getZ())) {
+                this.entity.getNavigation().stop();
+                this.prevYaw = LivingEntity.yRot;
                 BlockPos pos = DragonUtils.getBlockInTargetsViewCockatrice(this.entity, LivingEntity);
-                if (target == null || pos.distanceSq(target) > 4) {
+                if (target == null || pos.distSqr(target) > 4) {
                     target = pos;
                 }
             }
-            this.entity.setTargetedEntity(LivingEntity.getEntityId());
+            this.entity.setTargetedEntity(LivingEntity.getId());
 
-            double d0 = this.entity.getDistanceSq(LivingEntity.getPosX(), LivingEntity.getBoundingBox().minY, LivingEntity.getPosZ());
-            boolean flag = this.entity.getEntitySenses().canSee(LivingEntity);
+            double d0 = this.entity.distanceToSqr(LivingEntity.getX(), LivingEntity.getBoundingBox().minY, LivingEntity.getZ());
+            boolean flag = this.entity.getSensing().canSee(LivingEntity);
             boolean flag1 = this.seeTime > 0;
 
             if (flag != flag1) {
@@ -99,12 +99,12 @@ public class CockatriceAIStareAttack extends Goal {
                 --this.seeTime;
             }
             if (target != null) {
-                if (this.entity.getDistanceSq(target.getX(), target.getY(), target.getZ()) > 16 && !isEntityLookingAt(LivingEntity, entity, EntityCockatrice.VIEW_RADIUS)) {
-                    this.entity.getNavigator().tryMoveToXYZ(target.getX(), target.getY(), target.getZ(), moveSpeedAmp);
+                if (this.entity.distanceToSqr(target.getX(), target.getY(), target.getZ()) > 16 && !isEntityLookingAt(LivingEntity, entity, EntityCockatrice.VIEW_RADIUS)) {
+                    this.entity.getNavigation().moveTo(target.getX(), target.getY(), target.getZ(), moveSpeedAmp);
                 }
 
             }
-            this.entity.getLookController().setLookPosition(LivingEntity.getPosX(), LivingEntity.getPosY() + (double) LivingEntity.getEyeHeight(), LivingEntity.getPosZ(), (float) this.entity.getHorizontalFaceSpeed(), (float) this.entity.getVerticalFaceSpeed());
+            this.entity.getLookControl().setLookAt(LivingEntity.getX(), LivingEntity.getY() + (double) LivingEntity.getEyeHeight(), LivingEntity.getZ(), (float) this.entity.getMaxHeadYRot(), (float) this.entity.getMaxHeadXRot());
         }
     }
 
